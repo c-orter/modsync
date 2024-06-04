@@ -1,66 +1,77 @@
-# Welcome to the SPT Modding Project
+# Corter's Mod Sync For SPT & Fika
 
-This project is designed to streamline the initial setup process for building and creating mods in the SPT environment. Follow this guide to set up your environment efficiently.
+This project allows clients to easily synchronize mods between server and client when using a remote SPT/Fika server.
 
-## **Table of Contents**
-- [NodeJS Setup](#nodejs-setup)
-- [IDE Setup](#ide-setup)
-- [Workspace Configuration](#workspace-configuration)
-- [Environment Setup](#environment-setup)
-- [Essential Concepts](#essential-concepts)
-- [Coding Guidelines](#coding-guidelines)
-- [Distribution Guidelines](#distribution-guidelines)
+## Getting Started
 
-## **NodeJS Setup**
+### Server Setup
 
-Before you begin, ensure to install NodeJS version `v20.11.1`, which has been tested thoroughly with our mod templates and build scripts. Download it from the [official NodeJS website](https://nodejs.org/).
+1. Download the latest version of the server mod from the [GitHub Releases](https://github.com/Corter/ModSync/releases) page
+2. Extract into your SPT folder like any other server mod
+3. Start the server
 
-After installation, it's advised to reboot your system.
+> Look for the message `Mod: corter-modsync version: 0.0.0 by: Corter loaded` to ensure installation was successful
 
-## **IDE Setup**
+### Client Setup
 
-For this project, you can work with either [VSCodium](https://vscodium.com/) or [VSCode](https://code.visualstudio.com/). However, we strongly recommend using VSCode, as all development and testing have been carried out using this IDE, ensuring a smoother experience and compatibility with the project setups. Either way, we have a prepared a workspace file to assist you in setting up your environment.
+1. Download the latest version of the client mod from the [GitHub Releases](https://github.com/Corter/ModSync/releases) page
+2. Extract into your SPT/Fika folder like any other client mod
+3. Start the client and enjoy!
 
-## **Workspace Configuration**
 
-With NodeJS and your chosen IDE ready, initiate the `mod.code-workspace` file using your IDE:
+## Configuration
 
-> File -> Open Workspace from File...
+### Server
 
-Upon project loading, consider installing recommended plugins like the ESLint plugin.
+> No serverside configuration so far.
 
-## **Environment Setup**
+### Client
 
-An automated task is available to configure your environment for Typescript utilization:
+| Configuration | Description | Default |
+| --- | --- | --- |
+| `SyncServerMods` | Sync server mods in addition to client mods | `false` |
 
-> Terminal -> Run Task... -> Show All Tasks... -> npm: install
+## Ignoring Files & Folders
 
-Note: Preserve the `node_modules` folder as it contains necessary dependencies for Typescript and other functionalities.
+Sometimes you may not want clients to download certain files (for example if you as the host have client mods other users don't want).
+Or maybe you as a client have modified configs for some of your client mods and don't want those changes overriden.
 
-## **Essential Concepts**
+**Well fear not!**
 
-Prioritize understanding Dependency Injection and Inversion of Control, the architectural principles SPT adopts. Comprehensive guidelines will be available on the hub upon release.
+For **files** that you don't want synced, create a file next to it with the same name followed by `.nosync`, for example:
 
-Some resources to get you started:
- - [A quick intro to Dependency Injection](https://www.freecodecamp.org/news/a-quick-intro-to-dependency-injection-what-it-is-and-when-to-use-it-7578c84fa88f/)
- - [Understanding Inversion of Control (IoC) Principle](https://medium.com/@amitkma/understanding-inversion-of-control-ioc-principle-163b1dc97454)
+For example, if you didn't want to sync the DeClutterer mod, you would create a new file in `BepInEx/plugins` named `TYR_DeClutterer.dll.nosync`
+```sh
+$ ls BepInEx/plugins
+...
+TYR_DeClutterer.dll
+TYR_DeClutterer.dll.nosync
+```
 
-## **Coding Guidelines**
+This can be cumbersome for mods with lots of files though, so as a shortcut you can exclude entire **folders** by adding a `.nosync` file to the folder.
 
-Focus your mod development around the `mod.ts` file. In the `package.json` file, only alter these properties: `"name"`, `"version"`, `"sptVersion"`, `"loadBefore"`, `"loadAfter"`, `"incompatibilities"`, `"isBundleMod"`, `"author"`, and `"license"`.
+For example, if you didn't want to sync the Donuts mod (why would you want that?), you would create a new file in `BepInEx/plugins/dvize.Donuts` named `.nosync`
+```sh
+ls BepInEx/plugins/dvize.Donuts
+...
+.nosync
+```
 
-New to Typescript? Find comprehensive documentation on the [official website](https://www.typescriptlang.org/docs/).
+> This convention works on both the server and the client so prevent syncing to your heart's content.
 
-## **Distribution Guidelines**
+## Technical Explanation
 
-Automated tasks are set up to bundle all necessary files for your mod to function in SPT:
+This project is essentially a glorified HTTP wrapper with a few additional server routes added to the SPT server. It attempts to use CRC hashes and
+UTC modification timestamps to more accurately determine when a file is actually changed, but in reality I haven't tested it that extensively.
 
-> Terminal -> Run Task... -> Show All Tasks... -> npm: build
+Currently the way client mods are synced is by serving any file in `BepInEx/plugins` and `BepInEx/config` from the server. Similarly, server mods are
+served from `user/mods`.
 
-The ZIP output, located in the `dist` directory, contains all required files. Ensure all files are included and modify the `.buildignore` file as needed. This ZIP file is your uploadable asset for the hub.
+## Roadmap
 
-## **Conclusion**
-
-With this setup, you're ready to begin modding with SPT. If you run into any trouble be sure to check out the [modding documentation on the hub](https://hub.sp-tarkov.com/doc/lexicon/66-modding/). If you really get stuck feel free to join us in the [#mods-development](https://discord.com/channels/875684761291599922/875803116409323562) official Discord channel.
-
-Build something awesome!
+- [x] Initial release
+- [x] Super nifty GUI for notifying user of mod changes and monitoring download progress
+- [x] Ability to exclude files/folders from syncing from both client and server
+- [ ] Custom folder sync support (May be useful for cached bundles? or mods that add files places that aren't BepInEx/plugins, BepInEx/config, or user/mods)
+- [ ] Maybe cooler progress bar/custom UI (low priority)
+- [ ] Real tests?!? (low priority)

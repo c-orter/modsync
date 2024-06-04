@@ -1,5 +1,5 @@
 {
-  "name": "mod-sync",
+  "name": "corter-modsync",
   "version": "0.1.0",
   "main": "src/mod.js",
   "akiVersion": "~3.8",

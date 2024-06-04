@@ -11,11 +11,11 @@ await $`cp src/* dist/user/mods/corter-modsync/src`;
 
 await $`dotnet build --configuration Release`.cwd("ModSync/")
 await $`cp ModSync/bin/Release/Corter-ModSync.dll dist/BepInEx/plugins/`
-// await $`zip -r ../corter-modsync-${packageJson.version}.zip *`.cwd("dist")
 
-const zip = new AdmZip();
+const serverZip = new AdmZip();
+serverZip.addLocalFolder("dist/user/", "user");
+await serverZip.writeZipPromise(`corter-modsync-server-${packageJson.version}.zip`)
 
-zip.addLocalFolder("dist/user/", "user");
-zip.addLocalFolder("dist/BepInEx/", "BepInEx");
-
-await zip.writeZipPromise(`corter-modsync-${packageJson.version}.zip`)
+const clientZip = new AdmZip();
+clientZip.addLocalFolder("dist/BepInEx/", "BepInEx");
+await clientZip.writeZipPromise(`corter-modsync-client-${packageJson.version}.zip`)
