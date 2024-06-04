@@ -15,16 +15,11 @@ using UnityEngine;
 
 namespace ModSync
 {
-    internal class ModFile
+    internal class ModFile(uint crc, long modified, bool frozen = false)
     {
-        public ModFile(uint crc, long modified)
-        {
-            this.crc = crc;
-            this.modified = modified;
-        }
-
-        public uint crc;
-        public long modified;
+        public uint crc = crc;
+        public long modified = modified;
+        public bool frozen = frozen;
     }
 
     [BepInPlugin("xyz.corter.modsync", "ModSync", "0.1.0")]
@@ -34,8 +29,8 @@ namespace ModSync
         private ConfigEntry<bool> configSyncServerMods;
 
         private const int CONFIRMATION_DURATION = 15;
-        private Dictionary<string, ModFile> clientModDiff = new();
-        private Dictionary<string, ModFile> serverModDiff = new();
+        private Dictionary<string, ModFile> clientModDiff = [];
+        private Dictionary<string, ModFile> serverModDiff = [];
         private bool _isPopupOpen = false;
         private bool _showProgress = false;
         private bool _cancelledUpdate = false;
@@ -56,7 +51,14 @@ namespace ModSync
                 foreach (var file in Utility.GetFilesInDir(path))
                 {
                     var data = await VFS.ReadFileAsync(file);
-                    files.Add(file, new ModFile(Crc32.Compute(data), ((DateTimeOffset)File.GetLastWriteTimeUtc(file)).ToUnixTimeMilliseconds()));
+                    files.Add(
+                        file.Replace($"{basePath}\\", ""),
+                        new ModFile(
+                            Crc32.Compute(data),
+                            ((DateTimeOffset)File.GetLastWriteTimeUtc(file)).ToUnixTimeMilliseconds(),
+                            VFS.Exists($"{file}.frozen")
+                        )
+                    );
                 }
             }
 
@@ -69,10 +71,21 @@ namespace ModSync
 
             foreach (var kvp in remoteFiles)
             {
+                if (kvp.Value.frozen)
+                {
+                    Logger.LogWarning($"Skipping frozen file: {kvp.Key}");
+                    continue;
+                }
                 if (!localFiles.ContainsKey(kvp.Key))
+                {
+                    Logger.LogWarning($"Will acquire missing file: {kvp.Key}");
                     modifiedFiles.Add(kvp.Key, kvp.Value);
+                }
                 else if (kvp.Value.crc != localFiles[kvp.Key].crc && kvp.Value.modified > localFiles[kvp.Key].modified)
+                {
+                    Logger.LogWarning($"Will acquire modified file: {kvp.Key}");
                     modifiedFiles.Add(kvp.Key, kvp.Value);
+                }
             }
 
             return modifiedFiles;
@@ -122,19 +135,10 @@ namespace ModSync
                     return;
                 var data = await RequestHandler.GetDataAsync($"{baseUrl}/{file}");
 
-                var pathParts = file.Split('/');
-                for (int i = 0; i < pathParts.Length - 1; i++)
-                {
-                    var subDirectory = Path.Combine(baseDir, string.Join(Path.PathSeparator.ToString(), pathParts.Take(i + 1)));
-
-                    if (!VFS.Exists(subDirectory))
-                        VFS.CreateDirectory(subDirectory);
-                }
-
-                var fullPath = Path.Combine(baseDir, string.Join(Path.PathSeparator.ToString(), pathParts));
+                var fullPath = Path.Combine(baseDir, file);
                 if (_cancelledUpdate)
                     return;
-                await VFS.WriteFileAsync(fullPath, data);
+                await Utility.WriteFileAsync(fullPath, data);
 
                 _downloaded++;
             }
