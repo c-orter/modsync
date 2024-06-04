@@ -14,6 +14,8 @@ using Comfort.Common;
 using EFT.UI;
 using UnityEngine;
 
+using BepInPaths = BepInEx.Paths;
+
 namespace ModSync
 {
     internal class ModFile(uint crc, long modified, bool nosync = false)
@@ -222,7 +224,9 @@ namespace ModSync
 
         private void Awake()
         {
-            configSyncServerMods = Config.Bind("General", "SyncServerMods", false, "Sync server mods to client");
+            var configFile = new ConfigFile(Path.Combine(BepInPaths.ConfigPath, "corter.modsync.cfg"), true);
+
+            configSyncServerMods = configFile.Bind("General", "SyncServerMods", false, "Sync server mods to client");
 
             var localClientFiles = HashLocalFiles("BepInEx", ["plugins", "config"]);
             var localServerFiles = configSyncServerMods.Value ? HashLocalFiles("user", ["mods"]) : [];

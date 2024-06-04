@@ -13,6 +13,7 @@ import type { VFS } from "@spt-aki/utils/VFS";
 class Mod implements IPreAkiLoadMod {
 	private static container: DependencyContainer;
 
+	private clientModLastUpdated = 0;
 	private clientModHashes?: Record<string, { crc: number; modified: number }>;
 	private serverModHashes?: Record<string, { crc: number; modified: number }>;
 
@@ -132,7 +133,17 @@ class Mod implements IPreAkiLoadMod {
 				resp.writeHead(200, "OK");
 				resp.end(JSON.stringify({ version: packageJson.version }));
 			} else if (req.url === "/modsync/client/hashes") {
-				if (this.clientModHashes === undefined) {
+				const clientModUpdated = Math.max(
+					fs.statSync("BepInEx/plugins").mtimeMs,
+					fs.statSync("BepInEx/config").mtimeMs,
+				);
+
+				if (
+					this.clientModHashes === undefined ||
+					clientModUpdated > this.clientModLastUpdated
+				) {
+					this.clientModLastUpdated = clientModUpdated;
+
 					this.clientModHashes = await getFileHashes("BepInEx", [
 						"plugins",
 						"config",
