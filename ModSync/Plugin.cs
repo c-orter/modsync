@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Aki.Common.Http;
 using Aki.Common.Utils;
@@ -23,7 +23,7 @@ namespace ModSync
         public bool nosync = nosync;
     }
 
-    [BepInPlugin("xyz.corter.modsync", "ModSync", "0.1.0")]
+    [BepInPlugin("aaa.corter.modsync", "ModSync", "0.1.0")]
     public class Plugin : BaseUnityPlugin
     {
         // Configuration
@@ -40,7 +40,7 @@ namespace ModSync
 
         public static new ManualLogSource Logger = BepInEx.Logging.Logger.CreateLogSource("ModSync");
 
-        private async Task<Dictionary<string, ModFile>> HashLocalFiles(string baseDir, string[] subdirs)
+        private Dictionary<string, ModFile> HashLocalFiles(string baseDir, string[] subdirs)
         {
             var basePath = Path.Combine(Directory.GetCurrentDirectory(), baseDir);
 
@@ -52,15 +52,36 @@ namespace ModSync
                 var subDirNoSync = VFS.Exists(VFS.Combine(path, ".nosync")) || VFS.Exists(VFS.Combine(path, ".nosync.txt"));
                 foreach (var file in Utility.GetFilesInDir(path))
                 {
-                    var data = await VFS.ReadFileAsync(file);
-                    files.Add(
-                        file.Replace($"{basePath}\\", ""),
-                        new ModFile(
-                            Crc32.Compute(data),
-                            ((DateTimeOffset)File.GetLastWriteTimeUtc(file)).ToUnixTimeMilliseconds(),
-                            subDirNoSync || VFS.Exists($"{file}.nosync") || VFS.Exists($"{file}.nosync.txt")
-                        )
-                    );
+                    for (int i = 0; i < 5; i++)
+                    {
+                        try
+                        {
+                            var data = VFS.ReadFile(file);
+                            files.Add(
+                                file.Replace($"{basePath}\\", ""),
+                                new ModFile(
+                                    Crc32.Compute(data),
+                                    ((DateTimeOffset)File.GetLastWriteTimeUtc(file)).ToUnixTimeMilliseconds(),
+                                    subDirNoSync || VFS.Exists($"{file}.nosync") || VFS.Exists($"{file}.nosync.txt")
+                                )
+                            );
+
+                            break;
+                        }
+                        catch (IOException e)
+                        {
+                            if (e.Message.StartsWith("Sharing violation"))
+                            {
+                                if (i == 4)
+                                    throw new Exception($"Sharing violation on {file}. Please ensure the file closed and try again.", e);
+
+                                Logger.LogWarning("Sharing violation, retrying...");
+                                Thread.Sleep(100 * (int)Math.Pow(2, i));
+                            }
+                            else
+                                throw e;
+                        }
+                    }
                 }
             }
 
@@ -84,9 +105,8 @@ namespace ModSync
             return modifiedFiles;
         }
 
-        private async Task CheckLocalMods()
+        private async Task CheckLocalMods(Dictionary<string, ModFile> localClientFiles, Dictionary<string, ModFile> localServerFiles)
         {
-            var localClientFiles = await HashLocalFiles("BepInEx", ["plugins", "config"]);
             var clientResponse = await RequestHandler.GetJsonAsync("/modsync/client/hashes");
             var remoteClientFiles = Json.Deserialize<Dictionary<string, ModFile>>(clientResponse);
 
@@ -94,7 +114,6 @@ namespace ModSync
 
             if (configSyncServerMods.Value)
             {
-                var localServerFiles = await HashLocalFiles("user", ["mods"]);
                 var serverResponse = await RequestHandler.GetJsonAsync("/modsync/server/hashes");
                 var remoteServerFiles = Json.Deserialize<Dictionary<string, ModFile>>(serverResponse);
 
@@ -205,19 +224,35 @@ namespace ModSync
         {
             configSyncServerMods = Config.Bind("General", "SyncServerMods", false, "Sync server mods to client");
 
-            Logger.LogInfo("ModSync plugin loaded.");
+            var localClientFiles = HashLocalFiles("BepInEx", ["plugins", "config"]);
+            var localServerFiles = configSyncServerMods.Value ? HashLocalFiles("user", ["mods"]) : [];
 
             Task.Run(async () =>
             {
                 try
                 {
-                    await RequestHandler.GetJsonAsync("/modsync/version");
-                    await CheckLocalMods();
+                    var response = Json.Deserialize<Dictionary<string, string>>(await RequestHandler.GetJsonAsync("/modsync/version"));
+                    Logger.LogInfo($"ModSync found server version: {response["version"]}");
                 }
                 catch (Exception e)
                 {
                     Logger.LogError(e);
-                    Chainloader.DependencyErrors.Add($"Could not load {Info.Metadata.Name} due to request error. Is the server mod installed?");
+                    Chainloader.DependencyErrors.Add(
+                        $"Could not load {Info.Metadata.Name} due to request error. Please ensure the server mod is properly installed and try again."
+                    );
+                    return;
+                }
+
+                try
+                {
+                    await CheckLocalMods(localClientFiles, localServerFiles);
+                }
+                catch (Exception e)
+                {
+                    Logger.LogError(e);
+                    Chainloader.DependencyErrors.Add(
+                        $"Could not load {Info.Metadata.Name} due to error hashing local mods. Please ensure none of the files are open and try again."
+                    );
                 }
             });
         }
@@ -243,7 +278,7 @@ namespace ModSync
                 {
                     _showProgress = false;
                     Singleton<PreloaderUI>.Instance.ShowProgressScreen(
-                        "Downloading client mods...",
+                        "Downloading mods from server...",
                         clientModDiff.Count + (configSyncServerMods.Value ? serverModDiff.Count : 0),
                         () => _downloaded,
                         () => Task.Run(() => CancelUpdatingMods()),

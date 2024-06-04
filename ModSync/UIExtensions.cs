@@ -101,7 +101,7 @@ namespace ModSync
             exitButton.SetHeaderText(text, exitButton.HeaderSize);
             errorScreen.RectTransform.anchoredPosition = Vector2.zero;
 
-            errorScreen.Caption.SetText("Alert");
+            errorScreen.Caption.text = "ALERT";
 
             string string_1 = message.SubstringIfNecessary(500);
             errorScreenTraverse.Field("string_1").SetValue(string_1);
@@ -148,6 +148,7 @@ namespace ModSync
 
             while (GClass1296.Now < endTime)
             {
+                errorScreen.Caption.text = "ALERT";
                 errorDescription.text = string.Format(
                     $"{title}\n\n{string_1}\n\n{{1}}",
                     Math.Max(0, (int)(endTime - GClass1296.Now).TotalSeconds),
@@ -222,7 +223,7 @@ namespace ModSync
             errorScreenTraverse.Field("action_1").SetValue(action_1);
             MethodBase baseShow = typeof(ErrorScreen).BaseType.GetMethod("Show");
 
-            errorScreen.Caption.SetText("Alert");
+            errorScreen.Caption.text = "ALERT";
 
             errorScreenHandler.context = (GClass3087)baseShow.Invoke(errorScreen, [closeManuallyCallback]);
             errorScreenHandler.context.OnAccept += errorScreen.method_3;
@@ -270,6 +271,7 @@ namespace ModSync
             var downloaded = 0;
             while (downloaded < totalDownloads)
             {
+                errorScreen.Caption.text = "ALERT";
                 downloaded = getDownloadedCount();
                 errorDescription.text = string.Format(
                     "{0}\n\n{2}/{3} ({1:P1})\n\nGame must be restarted after completion.",
@@ -281,7 +283,7 @@ namespace ModSync
                 yield return null;
             }
 
-            errorDescription.text = $"Downloaded client mods.\n\n{totalDownloads}/{totalDownloads} ({1:P1})\n\nGame must be restarted.";
+            errorDescription.text = $"Downloaded mods from server.\n\n{totalDownloads}/{totalDownloads} ({1:P1})\n\nGame must be restarted.";
             DefaultUIButton exitButton = errorScreenTraverse.Field("_exitButton").GetValue<DefaultUIButton>();
             exitButton.SetHeaderText("EXIT GAME", exitButton.HeaderSize);
             errorScreenTraverse.Field("CloseAction").SetValue(timeOutCallback);
