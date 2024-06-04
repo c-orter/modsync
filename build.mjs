@@ -3,6 +3,9 @@ import AdmZip from "adm-zip"
 
 const packageJson = await Bun.file("package.json").json();
 
+await $`rm -rf dist`.nothrow().quiet()
+await $`rm corter-modsync-*-*.zip`.nothrow().quiet()
+
 await $`mkdir -p dist`;
 await $`mkdir -p dist/user/mods/corter-modsync/src`;
 await $`mkdir -p dist/BepInEx/plugins`;
