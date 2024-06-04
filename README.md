@@ -38,7 +38,9 @@ Or maybe you as a client have modified configs for some of your client mods and 
 
 **Well fear not!**
 
-For **files** that you don't want synced, create a file next to it with the same name followed by `.nosync`, for example:
+For **files** that you don't want synced, create a new, empty file next to it with the same name followed by `.nosync`, for example:
+
+> This can typically be done by right clicking, hovering 'New', and selecting 'Text Document', then deleting the entire name and entering `.nosync`
 
 For example, if you didn't want to sync the DeClutterer mod, you would create a new file in `BepInEx/plugins` named `TYR_DeClutterer.dll.nosync`
 ```sh
