@@ -1,0 +1,19 @@
+{
+    "compilerOptions": {
+        "allowJs": true,
+        "module": "NodeNext",
+        "target": "ES2022",
+        "moduleResolution": "NodeNext",
+        "esModuleInterop": true,
+        "downlevelIteration": true,
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": true,
+        "resolveJsonModule": true,
+        "outDir": "tmp",
+        "strict": true,
+        "paths": {
+            "@spt-aki/*": ["./types/*"],
+        },
+    },
+    "exclude": ["node_modules", "dist", "tmp"],
+}
