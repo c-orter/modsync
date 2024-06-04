@@ -64,6 +64,8 @@ ls BepInEx/plugins/dvize.Donuts
 
 ## Technical Explanation
 
+**NOTE**: Ironically, this mod cannot update itself and is automatically excluded by the server. If you need to update it, you'll have to do it manually, like any other client mod.
+
 This project is essentially a glorified HTTP wrapper with a few additional server routes added to the SPT server. It attempts to use CRC hashes and
 UTC modification timestamps to more accurately determine when a file is actually changed, but in reality I haven't tested it that extensively.
 
