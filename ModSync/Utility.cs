@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 using Aki.Common.Utils;
 
 namespace ModSync
@@ -12,9 +13,6 @@ namespace ModSync
 
             foreach (var directory in VFS.GetDirectories(dir))
             {
-                if (VFS.Exists(Path.Combine(directory, ".do-no-update")))
-                    continue;
-
                 foreach (var file in GetFilesInDir(directory))
                     files.Add(file);
             }
@@ -46,6 +44,18 @@ namespace ModSync
                 CopyFilesRecursively(dir, target.CreateSubdirectory(dir.Name));
             foreach (FileInfo file in source.GetFiles())
                 file.CopyTo(Path.Combine(target.FullName, file.Name));
+        }
+
+        public static async Task WriteFileAsync(string filepath, byte[] data)
+        {
+            var fileExists = VFS.Exists(filepath);
+            if (!fileExists)
+            {
+                VFS.CreateDirectory(filepath.GetDirectory());
+            }
+
+            using FileStream stream = File.Open(filepath, fileExists ? FileMode.Truncate : FileMode.CreateNew, FileAccess.Write);
+            await stream.WriteAsync(data, 0, data.Length);
         }
     }
 }
