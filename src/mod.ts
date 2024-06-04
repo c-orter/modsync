@@ -66,11 +66,18 @@ class Mod implements IPreAkiLoadMod {
 							.map((file) => path.join(dir, file))
 							.filter(
 								(file) =>
-									!file.endsWith(".nosync") && !vfs.exists(`${file}.nosync`),
+									!file.endsWith(".nosync") &&
+									!file.endsWith(".nosync.txt") &&
+									!vfs.exists(`${file}.nosync`) &&
+									!vfs.exists(`${file}.nosync.txt`),
 							),
 						...vfs
 							.getDirs(dir)
-							.filter((dir) => !vfs.exists(path.join(dir, ".nosync")))
+							.filter(
+								(dir) =>
+									!vfs.exists(path.join(dir, ".nosync")) &&
+									!vfs.exists(path.join(dir, ".nosync.txt")),
+							)
 							.flatMap((subDir) => getFilesInDir(path.join(dir, subDir))),
 					];
 				} catch {

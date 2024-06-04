@@ -49,7 +49,7 @@ namespace ModSync
             foreach (var subdir in subdirs)
             {
                 var path = Path.Combine(basePath, subdir);
-                var subDirNoSync = VFS.Exists(VFS.Combine(path, ".nosync"));
+                var subDirNoSync = VFS.Exists(VFS.Combine(path, ".nosync")) || VFS.Exists(VFS.Combine(path, ".nosync.txt"));
                 foreach (var file in Utility.GetFilesInDir(path))
                 {
                     var data = await VFS.ReadFileAsync(file);
@@ -58,7 +58,7 @@ namespace ModSync
                         new ModFile(
                             Crc32.Compute(data),
                             ((DateTimeOffset)File.GetLastWriteTimeUtc(file)).ToUnixTimeMilliseconds(),
-                            subDirNoSync || VFS.Exists($"{file}.nosync")
+                            subDirNoSync || VFS.Exists($"{file}.nosync") || VFS.Exists($"{file}.nosync.txt")
                         )
                     );
                 }
