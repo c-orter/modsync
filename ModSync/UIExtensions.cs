@@ -101,6 +101,8 @@ namespace ModSync
             exitButton.SetHeaderText(text, exitButton.HeaderSize);
             errorScreen.RectTransform.anchoredPosition = Vector2.zero;
 
+            errorScreen.Caption.SetText("Alert");
+
             string string_1 = message.SubstringIfNecessary(500);
             errorScreenTraverse.Field("string_1").SetValue(string_1);
 
@@ -219,6 +221,8 @@ namespace ModSync
             Action action_1 = timeOutCallback ?? closeManuallyCallback;
             errorScreenTraverse.Field("action_1").SetValue(action_1);
             MethodBase baseShow = typeof(ErrorScreen).BaseType.GetMethod("Show");
+
+            errorScreen.Caption.SetText("Alert");
 
             errorScreenHandler.context = (GClass3087)baseShow.Invoke(errorScreen, [closeManuallyCallback]);
             errorScreenHandler.context.OnAccept += errorScreen.method_3;

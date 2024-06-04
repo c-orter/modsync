@@ -13,21 +13,11 @@ import type { VFS } from "@spt-aki/utils/VFS";
 class Mod implements IPreAkiLoadMod {
 	private static container: DependencyContainer;
 
-	private version!: string;
-
 	private clientModHashes?: Record<string, { crc: number; modified: number }>;
 	private serverModHashes?: Record<string, { crc: number; modified: number }>;
 
 	public preAkiLoad(container: DependencyContainer): void {
 		Mod.container = container;
-		const logger = Mod.container.resolve<ILogger>("WinstonLogger");
-		const vfs = Mod.container.resolve<VFS>("VFS");
-
-		const packageJson = JSON.parse(
-			vfs.readFile(path.resolve(__dirname, "../package.json")),
-		);
-		this.version = packageJson.version;
-
 		const httpListenerService = container.resolve<HttpListenerModService>(
 			"HttpListenerModService",
 		);
@@ -69,7 +59,8 @@ class Mod implements IPreAkiLoadMod {
 									!file.endsWith(".nosync") &&
 									!file.endsWith(".nosync.txt") &&
 									!vfs.exists(`${file}.nosync`) &&
-									!vfs.exists(`${file}.nosync.txt`),
+									!vfs.exists(`${file}.nosync.txt`) &&
+									path.basename(file) !== "Corter-ModSync.dll",
 							),
 						...vfs
 							.getDirs(dir)
@@ -133,9 +124,13 @@ class Mod implements IPreAkiLoadMod {
 
 		try {
 			if (req.url === "/modsync/version") {
+				const packageJson = JSON.parse(
+					vfs.readFile(path.resolve(__dirname, "../package.json")),
+				);
+
 				resp.setHeader("Content-Type", "application/json");
 				resp.writeHead(200, "OK");
-				resp.end(JSON.stringify({ version: this.version }));
+				resp.end(JSON.stringify({ version: packageJson.version }));
 			} else if (req.url === "/modsync/client/hashes") {
 				if (this.clientModHashes === undefined) {
 					this.clientModHashes = await getFileHashes("BepInEx", [

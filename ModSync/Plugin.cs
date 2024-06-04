@@ -73,10 +73,10 @@ namespace ModSync
 
             foreach (var kvp in remoteFiles)
             {
-                if (kvp.Value.nosync)
-                    continue;
                 if (!localFiles.ContainsKey(kvp.Key))
                     modifiedFiles.Add(kvp.Key, kvp.Value);
+                else if (localFiles[kvp.Key].nosync)
+                    continue;
                 else if (kvp.Value.crc != localFiles[kvp.Key].crc && kvp.Value.modified > localFiles[kvp.Key].modified)
                     modifiedFiles.Add(kvp.Key, kvp.Value);
             }
@@ -211,11 +211,12 @@ namespace ModSync
             {
                 try
                 {
-                    var response = await RequestHandler.GetJsonAsync("/modsync/version");
+                    await RequestHandler.GetJsonAsync("/modsync/version");
                     await CheckLocalMods();
                 }
-                catch
+                catch (Exception e)
                 {
+                    Logger.LogError(e);
                     Chainloader.DependencyErrors.Add($"Could not load {Info.Metadata.Name} due to request error. Is the server mod installed?");
                 }
             });
