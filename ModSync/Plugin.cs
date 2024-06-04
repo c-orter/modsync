@@ -7,6 +7,7 @@ using Aki.Common.Http;
 using Aki.Common.Utils;
 using Aki.Custom.Utils;
 using BepInEx;
+using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using Comfort.Common;
@@ -15,11 +16,11 @@ using UnityEngine;
 
 namespace ModSync
 {
-    internal class ModFile(uint crc, long modified, bool frozen = false)
+    internal class ModFile(uint crc, long modified, bool nosync = false)
     {
         public uint crc = crc;
         public long modified = modified;
-        public bool frozen = frozen;
+        public bool nosync = nosync;
     }
 
     [BepInPlugin("xyz.corter.modsync", "ModSync", "0.1.0")]
@@ -48,6 +49,7 @@ namespace ModSync
             foreach (var subdir in subdirs)
             {
                 var path = Path.Combine(basePath, subdir);
+                var subDirNoSync = VFS.Exists(VFS.Combine(path, ".nosync"));
                 foreach (var file in Utility.GetFilesInDir(path))
                 {
                     var data = await VFS.ReadFileAsync(file);
@@ -56,7 +58,7 @@ namespace ModSync
                         new ModFile(
                             Crc32.Compute(data),
                             ((DateTimeOffset)File.GetLastWriteTimeUtc(file)).ToUnixTimeMilliseconds(),
-                            VFS.Exists($"{file}.frozen")
+                            subDirNoSync || VFS.Exists($"{file}.nosync")
                         )
                     );
                 }
@@ -71,21 +73,12 @@ namespace ModSync
 
             foreach (var kvp in remoteFiles)
             {
-                if (kvp.Value.frozen)
-                {
-                    Logger.LogWarning($"Skipping frozen file: {kvp.Key}");
+                if (kvp.Value.nosync)
                     continue;
-                }
                 if (!localFiles.ContainsKey(kvp.Key))
-                {
-                    Logger.LogWarning($"Will acquire missing file: {kvp.Key}");
                     modifiedFiles.Add(kvp.Key, kvp.Value);
-                }
                 else if (kvp.Value.crc != localFiles[kvp.Key].crc && kvp.Value.modified > localFiles[kvp.Key].modified)
-                {
-                    Logger.LogWarning($"Will acquire modified file: {kvp.Key}");
                     modifiedFiles.Add(kvp.Key, kvp.Value);
-                }
             }
 
             return modifiedFiles;
@@ -94,7 +87,7 @@ namespace ModSync
         private async Task CheckLocalMods()
         {
             var localClientFiles = await HashLocalFiles("BepInEx", ["plugins", "config"]);
-            var clientResponse = await RequestHandler.GetJsonAsync("/launcher/client/hashModFiles");
+            var clientResponse = await RequestHandler.GetJsonAsync("/modsync/client/hashes");
             var remoteClientFiles = Json.Deserialize<Dictionary<string, ModFile>>(clientResponse);
 
             clientModDiff = CompareLocalFiles(localClientFiles, remoteClientFiles);
@@ -102,7 +95,7 @@ namespace ModSync
             if (configSyncServerMods.Value)
             {
                 var localServerFiles = await HashLocalFiles("user", ["mods"]);
-                var serverResponse = await RequestHandler.GetJsonAsync("/launcher/server/hashModFiles");
+                var serverResponse = await RequestHandler.GetJsonAsync("/modsync/server/hashes");
                 var remoteServerFiles = Json.Deserialize<Dictionary<string, ModFile>>(serverResponse);
 
                 serverModDiff = CompareLocalFiles(localServerFiles, remoteServerFiles);
@@ -155,7 +148,7 @@ namespace ModSync
 
             _downloaded = 0;
             _showProgress = true;
-            await DownloadMods(clientModDiff, "/launcher/client/fetchModFile", clientBaseDir);
+            await DownloadMods(clientModDiff, "/modsync/client/fetch", clientBaseDir);
 
             if (configSyncServerMods.Value && !_cancelledUpdate)
             {
@@ -163,7 +156,7 @@ namespace ModSync
                 var serverTempDir = Path.Combine(_tempDir, "serverMods");
                 VFS.CreateDirectory(serverTempDir);
                 BackupModFolders(serverBaseDir, ["mods"], serverTempDir);
-                await DownloadMods(serverModDiff, "/launcher/server/fetchModFile", Path.Combine(Directory.GetCurrentDirectory(), "user"));
+                await DownloadMods(serverModDiff, "/modsync/server/fetch", Path.Combine(Directory.GetCurrentDirectory(), "user"));
             }
         }
 
@@ -214,7 +207,18 @@ namespace ModSync
 
             Logger.LogInfo("ModSync plugin loaded.");
 
-            Task.Run(() => CheckLocalMods());
+            Task.Run(async () =>
+            {
+                try
+                {
+                    var response = await RequestHandler.GetJsonAsync("/modsync/version");
+                    await CheckLocalMods();
+                }
+                catch
+                {
+                    Chainloader.DependencyErrors.Add($"Could not load {Info.Metadata.Name} due to request error. Is the server mod installed?");
+                }
+            });
         }
 
         public void Update()
@@ -225,10 +229,10 @@ namespace ModSync
                 {
                     _isPopupOpen = true;
                     Singleton<PreloaderUI>.Instance.ShowMismatchedModScreen(
-                        "Installed client mods do not match server.",
-                        "Please wait {0} seconds to automatically update them and restart the game.",
-                        "(Click below to start update.)",
-                        "(Or click below to ignore update.)",
+                        "Installed mods do not match server.",
+                        "Please wait {0} seconds before updating them.",
+                        "(Click below to start update)",
+                        "(Or click below to ignore updates)",
                         CONFIRMATION_DURATION,
                         () => Task.Run(() => SkipUpdatingMods()),
                         () => Task.Run(() => UpdateMods())
@@ -238,7 +242,6 @@ namespace ModSync
                 {
                     _showProgress = false;
                     Singleton<PreloaderUI>.Instance.ShowProgressScreen(
-                        "Downloading Client Mods",
                         "Downloading client mods...",
                         clientModDiff.Count + (configSyncServerMods.Value ? serverModDiff.Count : 0),
                         () => _downloaded,

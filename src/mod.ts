@@ -13,12 +13,20 @@ import type { VFS } from "@spt-aki/utils/VFS";
 class Mod implements IPreAkiLoadMod {
 	private static container: DependencyContainer;
 
+	private version!: string;
+
 	private clientModHashes?: Record<string, { crc: number; modified: number }>;
 	private serverModHashes?: Record<string, { crc: number; modified: number }>;
 
 	public preAkiLoad(container: DependencyContainer): void {
 		Mod.container = container;
 		const logger = Mod.container.resolve<ILogger>("WinstonLogger");
+		const vfs = Mod.container.resolve<VFS>("VFS");
+
+		const packageJson = JSON.parse(
+			vfs.readFile(path.resolve(__dirname, "../package.json")),
+		);
+		this.version = packageJson.version;
 
 		const httpListenerService = container.resolve<HttpListenerModService>(
 			"HttpListenerModService",
@@ -31,11 +39,7 @@ class Mod implements IPreAkiLoadMod {
 	}
 
 	public canHandleOverride(_sessionId: string, req: IncomingMessage): boolean {
-		return req.url
-			? /\/launcher\/(client|server)\/(hashModFiles|fetchModFile\/.+)/.test(
-					req.url,
-				)
-			: false;
+		return req.url?.startsWith("/modsync/") ?? false;
 	}
 
 	public async handleOverride(
@@ -57,9 +61,16 @@ class Mod implements IPreAkiLoadMod {
 			const getFilesInDir = (dir: string): string[] => {
 				try {
 					return [
-						...vfs.getFiles(dir).map((file) => path.join(dir, file)),
+						...vfs
+							.getFiles(dir)
+							.map((file) => path.join(dir, file))
+							.filter(
+								(file) =>
+									!file.endsWith(".nosync") && !vfs.exists(`${file}.nosync`),
+							),
 						...vfs
 							.getDirs(dir)
+							.filter((dir) => !vfs.exists(path.join(dir, ".nosync")))
 							.flatMap((subDir) => getFilesInDir(path.join(dir, subDir))),
 					];
 				} catch {
@@ -114,7 +125,11 @@ class Mod implements IPreAkiLoadMod {
 		};
 
 		try {
-			if (req.url === "/launcher/client/hashModFiles") {
+			if (req.url === "/modsync/version") {
+				resp.setHeader("Content-Type", "application/json");
+				resp.writeHead(200, "OK");
+				resp.end(JSON.stringify({ version: this.version }));
+			} else if (req.url === "/modsync/client/hashes") {
 				if (this.clientModHashes === undefined) {
 					this.clientModHashes = await getFileHashes("BepInEx", [
 						"plugins",
@@ -125,7 +140,7 @@ class Mod implements IPreAkiLoadMod {
 				resp.setHeader("Content-Type", "application/json");
 				resp.writeHead(200, "OK");
 				resp.end(JSON.stringify(this.clientModHashes));
-			} else if (req.url === "/launcher/server/hashModFiles") {
+			} else if (req.url === "/modsync/server/hashes") {
 				if (this.serverModHashes === undefined) {
 					this.serverModHashes = await getFileHashes("user", ["mods"]);
 				}
@@ -133,10 +148,10 @@ class Mod implements IPreAkiLoadMod {
 				resp.setHeader("Content-Type", "application/json");
 				resp.writeHead(200, "OK");
 				resp.end(JSON.stringify(this.serverModHashes));
-			} else if (req.url?.startsWith("/launcher/client/fetchModFile/")) {
+			} else if (req.url?.startsWith("/modsync/client/fetch/")) {
 				const filePath = decodeURIComponent(
 					// biome-ignore lint/style/noNonNullAssertion: <explanation>
-					req.url.split("/launcher/client/fetchModFile/").at(-1)!,
+					req.url.split("/modsync/client/fetch/").at(-1)!,
 				);
 
 				const sanitizedPath = sanitizeFilePath(filePath, "BepInEx", [
@@ -151,10 +166,10 @@ class Mod implements IPreAkiLoadMod {
 				}
 
 				httpFileUtil.sendFile(resp, sanitizedPath);
-			} else if (req.url?.startsWith("/launcher/server/fetchModFile/")) {
+			} else if (req.url?.startsWith("/modsync/server/fetch/")) {
 				const filePath = decodeURIComponent(
 					// biome-ignore lint/style/noNonNullAssertion: <explanation>
-					req.url.split("/launcher/server/fetchModFile/").at(-1)!,
+					req.url.split("/modsync/server/fetch/").at(-1)!,
 				);
 				const sanitizedPath = sanitizeFilePath(filePath, "user", ["mods"]);
 				if (!sanitizedPath) {

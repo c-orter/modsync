@@ -101,8 +101,6 @@ namespace ModSync
             exitButton.SetHeaderText(text, exitButton.HeaderSize);
             errorScreen.RectTransform.anchoredPosition = Vector2.zero;
 
-            errorScreen.Caption.SetText(string.IsNullOrEmpty(title) ? "ERROR" : title);
-
             string string_1 = message.SubstringIfNecessary(500);
             errorScreenTraverse.Field("string_1").SetValue(string_1);
 
@@ -164,7 +162,6 @@ namespace ModSync
 
         public static GClass3085 ShowProgressScreen(
             this PreloaderUI preloaderUI,
-            string header,
             string message,
             int totalDownloads,
             Func<int> getDownloadedCount,
@@ -193,7 +190,6 @@ namespace ModSync
             messageHandler.errorScreen = UnityEngine.Object.Instantiate(errorScreenTemplate, errorScreenContainer.transform, false);
             errorScreenContainer.AddChildNode(messageHandler.errorScreen);
             return messageHandler.errorScreen.ShowProgressScreen(
-                header,
                 message,
                 totalDownloads,
                 getDownloadedCount,
@@ -204,7 +200,6 @@ namespace ModSync
 
         public static GClass3087 ShowProgressScreen(
             this ErrorScreen errorScreen,
-            string title,
             string message,
             int totalDownloads,
             Func<int> getDownloadedCount,
@@ -240,8 +235,6 @@ namespace ModSync
             exitButton.SetHeaderText(text, exitButton.HeaderSize);
             errorScreen.RectTransform.anchoredPosition = Vector2.zero;
 
-            errorScreen.Caption.SetText(string.IsNullOrEmpty(title) ? "ERROR" : title);
-
             string string_1 = message.SubstringIfNecessary(500);
             errorScreenTraverse.Field("string_1").SetValue(string_1);
 
@@ -275,7 +268,7 @@ namespace ModSync
             {
                 downloaded = getDownloadedCount();
                 errorDescription.text = string.Format(
-                    "{0}\n\n{2}/{3} ({1:P1})",
+                    "{0}\n\n{2}/{3} ({1:P1})\n\nGame must be restarted after completion.",
                     errorScreenTraverse.Field("string_1").GetValue(),
                     (float)downloaded / totalDownloads,
                     downloaded,
@@ -284,7 +277,7 @@ namespace ModSync
                 yield return null;
             }
 
-            errorDescription.text = "Mods have been updated.\n\nPlease restart the game.";
+            errorDescription.text = $"Downloaded client mods.\n\n{totalDownloads}/{totalDownloads} ({1:P1})\n\nGame must be restarted.";
             DefaultUIButton exitButton = errorScreenTraverse.Field("_exitButton").GetValue<DefaultUIButton>();
             exitButton.SetHeaderText("EXIT GAME", exitButton.HeaderSize);
             errorScreenTraverse.Field("CloseAction").SetValue(timeOutCallback);
