@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Aki.Common.Http;
@@ -13,7 +15,6 @@ using BepInEx.Logging;
 using Comfort.Common;
 using EFT.UI;
 using UnityEngine;
-
 using BepInPaths = BepInEx.Paths;
 
 namespace ModSync
@@ -31,10 +32,10 @@ namespace ModSync
         // Configuration
         private ConfigEntry<bool> configSyncServerMods;
 
-        private const int CONFIRMATION_DURATION = 15;
+        private const int CONFIRMATION_DURATION = 10;
         private Dictionary<string, ModFile> clientModDiff = [];
         private Dictionary<string, ModFile> serverModDiff = [];
-        private bool _isPopupOpen = false;
+        private bool _showMismatched = true;
         private bool _showProgress = false;
         private bool _cancelledUpdate = false;
         private int _downloaded = 0;
@@ -42,69 +43,40 @@ namespace ModSync
 
         public static new ManualLogSource Logger = BepInEx.Logging.Logger.CreateLogSource("ModSync");
 
-        private Dictionary<string, ModFile> HashLocalFiles(string baseDir, string[] subdirs)
+        private KeyValuePair<string, ModFile> CreateModFile(string basePath, string file)
+        {
+            var data = VFS.ReadFile(file);
+            var relativePath = file.Replace($"{basePath}\\", "");
+
+            return new KeyValuePair<string, ModFile>(
+                relativePath,
+                new ModFile(
+                    Crc32.Compute(data),
+                    ((DateTimeOffset)File.GetLastWriteTimeUtc(file)).ToUnixTimeMilliseconds(),
+                    Utility.NoSyncInTree(basePath, relativePath) || VFS.Exists($"{file}.nosync") || VFS.Exists($"{file}.nosync.txt")
+                )
+            );
+        }
+
+        private Dictionary<string, ModFile> HashLocalFiles(string baseDir, string[] subDirs)
         {
             var basePath = Path.Combine(Directory.GetCurrentDirectory(), baseDir);
 
-            var files = new Dictionary<string, ModFile>();
-
-            foreach (var subdir in subdirs)
-            {
-                var path = Path.Combine(basePath, subdir);
-                var subDirNoSync = VFS.Exists(VFS.Combine(path, ".nosync")) || VFS.Exists(VFS.Combine(path, ".nosync.txt"));
-                foreach (var file in Utility.GetFilesInDir(path))
-                {
-                    for (int i = 0; i < 5; i++)
-                    {
-                        try
-                        {
-                            var data = VFS.ReadFile(file);
-                            files.Add(
-                                file.Replace($"{basePath}\\", ""),
-                                new ModFile(
-                                    Crc32.Compute(data),
-                                    ((DateTimeOffset)File.GetLastWriteTimeUtc(file)).ToUnixTimeMilliseconds(),
-                                    subDirNoSync || VFS.Exists($"{file}.nosync") || VFS.Exists($"{file}.nosync.txt")
-                                )
-                            );
-
-                            break;
-                        }
-                        catch (IOException e)
-                        {
-                            if (e.Message.StartsWith("Sharing violation"))
-                            {
-                                if (i == 4)
-                                    throw new Exception($"Sharing violation on {file}. Please ensure the file closed and try again.", e);
-
-                                Logger.LogWarning("Sharing violation, retrying...");
-                                Thread.Sleep(100 * (int)Math.Pow(2, i));
-                            }
-                            else
-                                throw e;
-                        }
-                    }
-                }
-            }
-
-            return files;
+            return subDirs
+                .Select((subDir) => Path.Combine(basePath, subDir))
+                .SelectMany((path) => Utility.GetFilesInDir(path).AsParallel().Select((file) => CreateModFile(basePath, file)))
+                .ToDictionary(item => item.Key, item => item.Value);
         }
 
         private Dictionary<string, ModFile> CompareLocalFiles(Dictionary<string, ModFile> localFiles, Dictionary<string, ModFile> remoteFiles)
         {
-            var modifiedFiles = new Dictionary<string, ModFile>();
-
-            foreach (var kvp in remoteFiles)
-            {
-                if (!localFiles.ContainsKey(kvp.Key))
-                    modifiedFiles.Add(kvp.Key, kvp.Value);
-                else if (localFiles[kvp.Key].nosync)
-                    continue;
-                else if (kvp.Value.crc != localFiles[kvp.Key].crc && kvp.Value.modified > localFiles[kvp.Key].modified)
-                    modifiedFiles.Add(kvp.Key, kvp.Value);
-            }
-
-            return modifiedFiles;
+            return remoteFiles
+                .Where(
+                    (kvp) =>
+                        !localFiles.ContainsKey(kvp.Key)
+                        || (!localFiles[kvp.Key].nosync && kvp.Value.crc != localFiles[kvp.Key].crc && kvp.Value.modified > localFiles[kvp.Key].modified)
+                )
+                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
         }
 
         private async Task CheckLocalMods(Dictionary<string, ModFile> localClientFiles, Dictionary<string, ModFile> localServerFiles)
@@ -141,21 +113,35 @@ namespace ModSync
             }
         }
 
+        private async Task DownloadMod(string file, string baseUrl, string baseDir, SemaphoreSlim limiter)
+        {
+            await limiter.WaitAsync();
+            if (_cancelledUpdate)
+                return;
+
+            var data = await RequestHandler.GetDataAsync($"{baseUrl}/{file}");
+
+            var fullPath = Path.Combine(baseDir, file);
+            if (_cancelledUpdate)
+                return;
+
+            await Utility.WriteFileAsync(fullPath, data);
+        }
+
         private async Task DownloadMods(Dictionary<string, ModFile> modDiff, string baseUrl, string baseDir)
         {
-            foreach (var file in modDiff.Keys)
+            var limiter = new SemaphoreSlim(32, maxCount: 32);
+            var taskList = modDiff.Keys.Select((file) => DownloadMod(file, baseUrl, baseDir, limiter)).ToList();
+
+            while (taskList.Count > 0)
             {
-                if (_cancelledUpdate)
-                    return;
-                var data = await RequestHandler.GetDataAsync($"{baseUrl}/{file}");
-
-                var fullPath = Path.Combine(baseDir, file);
-                if (_cancelledUpdate)
-                    return;
-                await Utility.WriteFileAsync(fullPath, data);
-
+                var task = await Task.WhenAny(taskList);
+                taskList.Remove(task);
+                limiter.Release();
                 _downloaded++;
             }
+
+            limiter.Dispose();
         }
 
         private async Task UpdateMods()
@@ -265,9 +251,9 @@ namespace ModSync
         {
             if (Singleton<PreloaderUI>.Instantiated)
             {
-                if (!_isPopupOpen && (clientModDiff.Count > 0 || (configSyncServerMods.Value && serverModDiff.Count > 0)))
+                if (_showMismatched && (clientModDiff.Count > 0 || (configSyncServerMods.Value && serverModDiff.Count > 0)))
                 {
-                    _isPopupOpen = true;
+                    _showMismatched = false;
                     Singleton<PreloaderUI>.Instance.ShowMismatchedModScreen(
                         "Installed mods do not match server.",
                         "Please wait {0} seconds before updating them.",

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Aki.Common.Utils;
 
@@ -21,6 +22,21 @@ namespace ModSync
                 files.Add(file);
 
             return files;
+        }
+
+        public static bool NoSyncInTree(string baseDir, string relativePath)
+        {
+            var pathParts = Path.GetDirectoryName(relativePath).Split(Path.DirectorySeparatorChar);
+
+            for (int i = pathParts.Length - 1; i >= 0; i--)
+            {
+                var path = Path.Combine(baseDir, string.Join(Path.DirectorySeparatorChar.ToString(), pathParts.Take(i + 1)), ".nosync");
+
+                if (VFS.Exists(path) || VFS.Exists($"{path}.txt"))
+                    return true;
+            }
+
+            return false;
         }
 
         public static string GetTemporaryDirectory()
