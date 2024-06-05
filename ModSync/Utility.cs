@@ -24,19 +24,15 @@ namespace ModSync
             return files;
         }
 
-        public static bool NoSyncInTree(string baseDir, string relativePath)
+        public static bool NoSyncInTree(string baseDir, string dir)
         {
-            var pathParts = Path.GetDirectoryName(relativePath).Split(Path.DirectorySeparatorChar);
+            var noSyncPath = Path.Combine(dir, ".nosync");
+            if (VFS.Exists(noSyncPath) || VFS.Exists($"{noSyncPath}.txt"))
+                return true;
+            else if (dir == baseDir || dir == string.Empty)
+                return false;
 
-            for (int i = pathParts.Length - 1; i >= 0; i--)
-            {
-                var path = Path.Combine(baseDir, string.Join(Path.DirectorySeparatorChar.ToString(), pathParts.Take(i + 1)), ".nosync");
-
-                if (VFS.Exists(path) || VFS.Exists($"{path}.txt"))
-                    return true;
-            }
-
-            return false;
+            return NoSyncInTree(baseDir, Path.GetDirectoryName(dir));
         }
 
         public static string GetTemporaryDirectory()
