@@ -53,7 +53,7 @@ namespace ModSync.UI
                     borderRect.width - 2 * borderThickness,
                     borderRect.height - 2 * borderThickness
                 );
-            // GUI.Box(infoRect, "");
+            
             GUI.DrawTexture(alertRect, Utility.GetTexture(Colors.Dark.SetAlpha(0.5f)), ScaleMode.StretchToFill, true, 0);
 
             Rect infoRect = new(alertRect.x, alertRect.y, alertRect.width, alertRect.height - 48f);
