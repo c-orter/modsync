@@ -78,5 +78,5 @@ served from `user/mods`.
 - [x] Super nifty GUI for notifying user of mod changes and monitoring download progress
 - [x] Ability to exclude files/folders from syncing from both client and server
 - [ ] Custom folder sync support (May be useful for cached bundles? or mods that add files places that aren't BepInEx/plugins, BepInEx/config, or user/mods)
-- [ ] Maybe cooler progress bar/custom UI (low priority)
+- [x] Maybe cooler progress bar/custom UI (low priority)
 - [ ] Real tests?!? (low priority)
