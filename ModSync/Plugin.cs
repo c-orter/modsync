@@ -13,6 +13,7 @@ using BepInEx.Configuration;
 using BepInEx.Logging;
 using Comfort.Common;
 using EFT.UI;
+using ModSync.UI;
 using UnityEngine;
 using BepInPaths = BepInEx.Paths;
 
@@ -31,14 +32,15 @@ namespace ModSync
         // Configuration
         private ConfigEntry<bool> configSyncServerMods;
 
-        private const int CONFIRMATION_DURATION = 10;
         private Dictionary<string, ModFile> clientModDiff = [];
         private Dictionary<string, ModFile> serverModDiff = [];
-        private bool _showMismatched = true;
-        private bool _showProgress = false;
-        private bool _cancelledUpdate = false;
-        private int _downloaded = 0;
-        private string _tempDir = string.Empty;
+        private bool mismatchedMods = false;
+        private bool showMenu = false;
+        private bool downloadingMods = false;
+        private bool restartRequired = false;
+        private bool cancelledUpdate = false;
+        private int downloadCount = 0;
+        private string backupDir = string.Empty;
 
         public static new ManualLogSource Logger = BepInEx.Logging.Logger.CreateLogSource("ModSync");
 
@@ -94,11 +96,13 @@ namespace ModSync
             }
 
             Logger.LogInfo($"Found {clientModDiff.Count + serverModDiff.Count} files to download.");
+            mismatchedMods = clientModDiff.Count + serverModDiff.Count > 0;
         }
 
         private void SkipUpdatingMods()
         {
-            return;
+            showMenu = true;
+            mismatchedMods = false;
         }
 
         private void BackupModFolders(string baseDir, string[] subDirs, string tempDir)
@@ -115,13 +119,13 @@ namespace ModSync
         private async Task DownloadMod(string file, string baseUrl, string baseDir, SemaphoreSlim limiter)
         {
             await limiter.WaitAsync();
-            if (_cancelledUpdate)
+            if (cancelledUpdate)
                 return;
 
             var data = await RequestHandler.GetDataAsync($"{baseUrl}/{file}");
 
             var fullPath = Path.Combine(baseDir, file);
-            if (_cancelledUpdate)
+            if (cancelledUpdate)
                 return;
 
             await Utility.WriteFileAsync(fullPath, data);
@@ -137,7 +141,7 @@ namespace ModSync
                 var task = await Task.WhenAny(taskList);
                 taskList.Remove(task);
                 limiter.Release();
-                _downloaded++;
+                downloadCount++;
             }
 
             limiter.Dispose();
@@ -145,25 +149,29 @@ namespace ModSync
 
         private async Task UpdateMods()
         {
-            _tempDir = Utility.GetTemporaryDirectory();
+            mismatchedMods = false;
+            backupDir = Utility.GetTemporaryDirectory();
 
             var clientBaseDir = Path.Combine(Directory.GetCurrentDirectory(), "BepInEx");
-            var clientTempDir = Path.Combine(_tempDir, "clientMods");
+            var clientTempDir = Path.Combine(backupDir, "clientMods");
             VFS.CreateDirectory(clientTempDir);
             BackupModFolders(clientBaseDir, ["plugins", "config"], clientTempDir);
 
-            _downloaded = 0;
-            _showProgress = true;
+            downloadCount = 0;
+            downloadingMods = true;
             await DownloadMods(clientModDiff, "/modsync/client/fetch", clientBaseDir);
 
-            if (configSyncServerMods.Value && !_cancelledUpdate)
+            if (configSyncServerMods.Value && !cancelledUpdate)
             {
                 var serverBaseDir = Path.Combine(Directory.GetCurrentDirectory(), "user");
-                var serverTempDir = Path.Combine(_tempDir, "serverMods");
+                var serverTempDir = Path.Combine(backupDir, "serverMods");
                 VFS.CreateDirectory(serverTempDir);
                 BackupModFolders(serverBaseDir, ["mods"], serverTempDir);
                 await DownloadMods(serverModDiff, "/modsync/server/fetch", Path.Combine(Directory.GetCurrentDirectory(), "user"));
             }
+
+            if (!cancelledUpdate)
+                restartRequired = true;
         }
 
         private void RestoreBackup(string baseDir, string[] subDirs, string tempDir)
@@ -182,27 +190,30 @@ namespace ModSync
 
         private void CancelUpdatingMods()
         {
-            _cancelledUpdate = true;
+            downloadingMods = false;
+            cancelledUpdate = true;
 
             var clientBaseDir = Path.Combine(Directory.GetCurrentDirectory(), "BepInEx");
-            var clientTempDir = Path.Combine(_tempDir, "clientMods");
+            var clientTempDir = Path.Combine(backupDir, "clientMods");
             RestoreBackup(clientBaseDir, ["plugins", "config"], clientTempDir);
 
             if (configSyncServerMods.Value)
             {
                 var serverBaseDir = Path.Combine(Directory.GetCurrentDirectory(), "user");
-                var serverTempDir = Path.Combine(_tempDir, "serverMods");
+                var serverTempDir = Path.Combine(backupDir, "serverMods");
                 RestoreBackup(serverBaseDir, ["mods"], serverTempDir);
             }
 
-            Directory.Delete(_tempDir, true);
-            _tempDir = string.Empty;
+            Directory.Delete(backupDir, true);
+            backupDir = string.Empty;
+
+            showMenu = true;
         }
 
         private void FinishUpdatingMods()
         {
-            Directory.Delete(_tempDir, true);
-            _tempDir = string.Empty;
+            Directory.Delete(backupDir, true);
+            backupDir = string.Empty;
 
             Application.Quit();
         }
@@ -246,35 +257,80 @@ namespace ModSync
             });
         }
 
+        private AlertWindow alertWindow;
+        private ProgressWindow progressWindow;
+        private RestartWindow restartWindow;
+
+        private void Start()
+        {
+            alertWindow = new AlertWindow("Installed mods do not match server", "Would you like to update?");
+            progressWindow = new ProgressWindow("Downloading Updates...", "Your game will need to be restarted\nafter update completes.");
+            restartWindow = new RestartWindow("Update Complete.", "Please restart your game to continue.");
+        }
+
+        private void OnGUI()
+        {
+            if (Singleton<CommonUI>.Instantiated)
+            {
+                if (restartRequired)
+                    restartWindow.Draw(FinishUpdatingMods);
+                else if (downloadingMods)
+                    progressWindow.Draw(downloadCount, clientModDiff.Count + serverModDiff.Count, CancelUpdatingMods);
+                else if (mismatchedMods)
+                    alertWindow.Draw(() => Task.Run(() => UpdateMods()), SkipUpdatingMods);
+            }
+        }
+
         public void Update()
         {
-            if (Singleton<PreloaderUI>.Instantiated)
+            if (mismatchedMods || downloadingMods || restartRequired)
             {
-                if (_showMismatched && (clientModDiff.Count > 0 || (configSyncServerMods.Value && serverModDiff.Count > 0)))
-                {
-                    _showMismatched = false;
-                    Singleton<PreloaderUI>.Instance.ShowMismatchedModScreen(
-                        "Installed mods do not match server.",
-                        "Please wait {0} seconds before updating them.",
-                        "(Click below to start update)",
-                        "(Or click below to ignore updates)",
-                        CONFIRMATION_DURATION,
-                        () => Task.Run(() => SkipUpdatingMods()),
-                        () => Task.Run(() => UpdateMods())
-                    );
-                }
-                else if (_showProgress && (clientModDiff.Count > 0 || (configSyncServerMods.Value && serverModDiff.Count > 0)))
-                {
-                    _showProgress = false;
-                    Singleton<PreloaderUI>.Instance.ShowProgressScreen(
-                        "Downloading mods from server...",
-                        clientModDiff.Count + (configSyncServerMods.Value ? serverModDiff.Count : 0),
-                        () => _downloaded,
-                        () => Task.Run(() => CancelUpdatingMods()),
-                        () => Task.Run(() => FinishUpdatingMods())
-                    );
-                }
+                if (Singleton<LoginUI>.Instantiated && Singleton<LoginUI>.Instance.gameObject.activeSelf)
+                    Singleton<LoginUI>.Instance.gameObject.SetActive(false);
+                if (Singleton<PreloaderUI>.Instantiated && Singleton<PreloaderUI>.Instance.gameObject.activeSelf)
+                    Singleton<PreloaderUI>.Instance.gameObject.SetActive(false);
+
+                if (Singleton<CommonUI>.Instantiated && Singleton<CommonUI>.Instance.gameObject.activeSelf)
+                    Singleton<CommonUI>.Instance.gameObject.SetActive(false);
             }
+
+            if (showMenu)
+            {
+                showMenu = false;
+
+                if (Singleton<PreloaderUI>.Instantiated && !Singleton<PreloaderUI>.Instance.gameObject.activeSelf)
+                    Singleton<PreloaderUI>.Instance.gameObject.SetActive(true);
+
+                if (Singleton<CommonUI>.Instantiated && !Singleton<CommonUI>.Instance.gameObject.activeSelf)
+                    Singleton<CommonUI>.Instance.gameObject.SetActive(true);
+            }
+
+            // {
+            //     if (_showMismatched && (clientModDiff.Count > 0 || (configSyncServerMods.Value && serverModDiff.Count > 0)))
+            //     {
+            //         _showMismatched = false;
+            //         Singleton<PreloaderUI>.Instance.ShowMismatchedModScreen(
+            //             "Installed mods do not match server.",
+            //             "Please wait {0} seconds before updating them.",
+            //             "(Click below to start update)",
+            //             "(Or click below to ignore updates)",
+            //             CONFIRMATION_DURATION,
+            //             () => Task.Run(() => SkipUpdatingMods()),
+            //             () => Task.Run(() => UpdateMods())
+            //         );
+            //     }
+            //     else if (_showProgress && (clientModDiff.Count > 0 || (configSyncServerMods.Value && serverModDiff.Count > 0)))
+            //     {
+            //         _showProgress = false;
+            //         Singleton<PreloaderUI>.Instance.ShowProgressScreen(
+            //             "Downloading mods from server...",
+            //             clientModDiff.Count + (configSyncServerMods.Value ? serverModDiff.Count : 0),
+            //             () => _downloaded,
+            //             () => Task.Run(() => CancelUpdatingMods()),
+            //             () => Task.Run(() => FinishUpdatingMods())
+            //         );
+            //     }
+            // }
         }
     }
 }

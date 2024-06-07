@@ -129,8 +129,7 @@
   <ItemGroup>
     <Compile Include="Plugin.cs" />
     <Compile Include="Utility.cs" />
-    <Compile Include="UIExtensions.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ModSync.GUI\*.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
