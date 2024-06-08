@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -27,7 +27,7 @@ namespace ModSync
         public bool nosync = nosync;
     }
 
-    [BepInPlugin("aaa.corter.modsync", "Corter ModSync", "0.2.0")]
+    [BepInPlugin("aaa.corter.modsync", "Corter ModSync", "0.2.1")]
     public class Plugin : BaseUnityPlugin
     {
         // Configuration
