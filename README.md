@@ -1,5 +1,24 @@
 # Corter's Mod Sync For SPT & Fika
 
+## About The Project
+
+<table>
+<tbody>
+<tr>
+<td>
+
+![Screenshot Confirmation](https://github.com/c-orter/modsync/assets/5890013/931c9187-2a26-4fd5-8fe7-5f98383b1c10)</td>
+<td>
+
+![Screenshot Progress](https://github.com/c-orter/modsync/assets/5890013/61954bdc-a7c6-4713-b106-00577076edd5)</td>
+</tr>
+<tr>
+<td>Prompt to update</td>
+<td>Update progress</td>
+</tr>
+</tbody>
+</table>
+
 This project allows clients to easily synchronize mods between server and client when using a remote SPT/Fika server.
 
 ## Getting Started
