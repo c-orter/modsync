@@ -13,6 +13,7 @@ using BepInEx.Configuration;
 using BepInEx.Logging;
 using Comfort.Common;
 using EFT.UI;
+using HarmonyLib;
 using ModSync.UI;
 using UnityEngine;
 using BepInPaths = BepInEx.Paths;
@@ -26,7 +27,7 @@ namespace ModSync
         public bool nosync = nosync;
     }
 
-    [BepInPlugin("aaa.corter.modsync", "ModSync", "0.1.0")]
+    [BepInPlugin("aaa.corter.modsync", "Corter ModSync", "0.2.0")]
     public class Plugin : BaseUnityPlugin
     {
         // Configuration
@@ -222,7 +223,10 @@ namespace ModSync
         {
             var configFile = new ConfigFile(Path.Combine(BepInPaths.ConfigPath, "corter.modsync.cfg"), true);
 
-            configSyncServerMods = configFile.Bind("General", "SyncServerMods", false, "Sync server mods to client");
+            var PluginTraverse = new Traverse(this);
+            PluginTraverse.Field("Config").SetValue(configFile);
+
+            configSyncServerMods = Config.Bind("General", "SyncServerMods", false, "Sync server mods to client");
 
             var localClientFiles = HashLocalFiles("BepInEx", ["plugins", "config"]);
             var localServerFiles = configSyncServerMods.Value ? HashLocalFiles("user", ["mods"]) : [];
