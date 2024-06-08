@@ -221,11 +221,6 @@ namespace ModSync
 
         private void Awake()
         {
-            var configFile = new ConfigFile(Path.Combine(BepInPaths.ConfigPath, "corter.modsync.cfg"), true);
-
-            var PluginTraverse = new Traverse(this);
-            PluginTraverse.Field("Config").SetValue(configFile);
-
             configSyncServerMods = Config.Bind("General", "SyncServerMods", false, "Sync server mods to client");
 
             var localClientFiles = HashLocalFiles("BepInEx", ["plugins", "config"]);
