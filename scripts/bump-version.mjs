@@ -46,3 +46,13 @@ await Bun.write(
 			`AssemblyFileVersion("${newVersion}")`,
 		),
 );
+
+const PluginCsString = await Bun.file("ModSync/Plugin.cs").text();
+
+await Bun.write(
+	"ModSync/Plugin.cs",
+	PluginCsString.replace(
+		`BepInPlugin("aaa.corter.modsync", "Corter ModSync", "${currentVersion}")`,
+		`BepInPlugin("aaa.corter.modsync", "Corter ModSync", "${newVersion}")`,
+	),
+);
