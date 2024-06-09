@@ -42,9 +42,16 @@ This project allows clients to easily synchronize mods between server and client
 
 ### Server
 
-> No serverside configuration so far.
+> Modify `config.json` in user/mods/corter-modsync
+
+| Configuration | Description | Default |
+| --- | --- | --- |
+| `clientDirs` | List of client directories to sync | `["BepInEx/plugins", "BepInEx/config"]` |
+| `serverDirs` | List of server directories to sync | `["user/mods"]` |
 
 ### Client
+
+> Modify `aaa.corter.modsync.cfg` in BepInEx/config or use the config manager with F12
 
 | Configuration | Description | Default |
 | --- | --- | --- |
@@ -96,6 +103,6 @@ served from `user/mods`.
 - [x] Initial release
 - [x] Super nifty GUI for notifying user of mod changes and monitoring download progress
 - [x] Ability to exclude files/folders from syncing from both client and server
-- [ ] Custom folder sync support (May be useful for cached bundles? or mods that add files places that aren't BepInEx/plugins, BepInEx/config, or user/mods)
+- [x] Custom folder sync support (May be useful for cached bundles? or mods that add files places that aren't BepInEx/plugins, BepInEx/config, or user/mods)
 - [x] Maybe cooler progress bar/custom UI (low priority)
 - [ ] Real tests?!? (low priority)
