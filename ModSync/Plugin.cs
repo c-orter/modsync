@@ -25,7 +25,7 @@ namespace ModSync
         public bool nosync = nosync;
     }
 
-    [BepInPlugin("aaa.corter.modsync", "Corter ModSync", "0.3.0")]
+    [BepInPlugin("aaa.corter.modsync", "Corter ModSync", "0.3.1")]
     public class Plugin : BaseUnityPlugin
     {
         // Configuration
