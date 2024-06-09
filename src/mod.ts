@@ -43,12 +43,17 @@ class Mod implements IPreAkiLoadMod {
 		const hashUtil = Mod.container.resolve<HashUtil>("HashUtil");
 		const httpFileUtil = Mod.container.resolve<HttpFileUtil>("HttpFileUtil");
 
+		const {
+			clientDirs,
+			serverDirs,
+		}: {
+			clientDirs: string[];
+			serverDirs: string[];
+		} = require("./config.json");
+
 		const getFileHashes = async (
-			baseDir: string,
 			dirs: string[],
 		): Promise<Record<string, { crc: number; modified: number }>> => {
-			const basePath = path.resolve(process.cwd(), baseDir);
-
 			const getFilesInDir = (dir: string): string[] => {
 				try {
 					return [
@@ -79,11 +84,14 @@ class Mod implements IPreAkiLoadMod {
 
 			const buildModFile = (file: string) => {
 				const modified = fs.statSync(file).mtime;
+
+				// biome-ignore lint/style/noNonNullAssertion: <explanation>
+				const dir = dirs.find(
+					(dir) => !path.relative(dir, file).startsWith(".."),
+				)!;
+
 				return [
-					path
-						.relative(basePath, file)
-						.split(path.posix.sep)
-						.join(path.win32.sep),
+					path.join(dir, path.relative(dir, file)),
 					{
 						crc: hashUtil.generateCRC32ForFile(file),
 						modified: new Date(
@@ -95,29 +103,23 @@ class Mod implements IPreAkiLoadMod {
 
 			return Object.assign(
 				{},
-				...dirs.map((dir) => {
-					const subDir = path.join(baseDir, dir);
-					const subDirFiles = getFilesInDir(subDir);
-
-					return Object.fromEntries(subDirFiles.map(buildModFile));
-				}),
+				...dirs
+					.map((dir) => path.join(process.cwd(), dir))
+					.map((dir) =>
+						Object.fromEntries(getFilesInDir(dir).map(buildModFile)),
+					),
 			);
 		};
 
-		const sanitizeFilePath = (
-			file: string,
-			baseDir: string,
-			allowedSubDirs: string[],
-		) => {
+		const sanitizeFilePath = (file: string, allowedSubDirs: string[]) => {
 			const sanitizedPath = path.join(
-				baseDir,
 				path.normalize(file).replace(/^(\.\.(\/|\\|$))+/, ""),
 			);
 
 			return (
 				!allowedSubDirs.every((subDir) =>
 					path
-						.relative(path.join(baseDir, subDir), sanitizedPath)
+						.relative(path.join(process.cwd(), subDir), sanitizedPath)
 						.startsWith(".."),
 				) && sanitizedPath
 			);
@@ -132,10 +134,17 @@ class Mod implements IPreAkiLoadMod {
 				resp.setHeader("Content-Type", "application/json");
 				resp.writeHead(200, "OK");
 				resp.end(JSON.stringify({ version: packageJson.version }));
+			} else if (req.url === "/modsync/client/dirs") {
+				resp.setHeader("Content-Type", "application/json");
+				resp.writeHead(200, "OK");
+				resp.end(JSON.stringify(clientDirs));
+			} else if (req.url === "/modsync/server/dirs") {
+				resp.setHeader("Content-Type", "application/json");
+				resp.writeHead(200, "OK");
+				resp.end(JSON.stringify(serverDirs));
 			} else if (req.url === "/modsync/client/hashes") {
 				const clientModUpdated = Math.max(
-					fs.statSync("BepInEx/plugins").mtimeMs,
-					fs.statSync("BepInEx/config").mtimeMs,
+					...clientDirs.map((dir) => fs.statSync(dir).mtimeMs),
 				);
 
 				if (
@@ -144,10 +153,7 @@ class Mod implements IPreAkiLoadMod {
 				) {
 					this.clientModLastUpdated = clientModUpdated;
 
-					this.clientModHashes = await getFileHashes("BepInEx", [
-						"plugins",
-						"config",
-					]);
+					this.clientModHashes = await getFileHashes(clientDirs);
 				}
 
 				resp.setHeader("Content-Type", "application/json");
@@ -155,7 +161,7 @@ class Mod implements IPreAkiLoadMod {
 				resp.end(JSON.stringify(this.clientModHashes));
 			} else if (req.url === "/modsync/server/hashes") {
 				if (this.serverModHashes === undefined) {
-					this.serverModHashes = await getFileHashes("user", ["mods"]);
+					this.serverModHashes = await getFileHashes(serverDirs);
 				}
 
 				resp.setHeader("Content-Type", "application/json");
@@ -167,14 +173,18 @@ class Mod implements IPreAkiLoadMod {
 					req.url.split("/modsync/client/fetch/").at(-1)!,
 				);
 
-				const sanitizedPath = sanitizeFilePath(filePath, "BepInEx", [
-					"plugins",
-					"config",
-				]);
+				const sanitizedPath = sanitizeFilePath(filePath, clientDirs);
 				if (!sanitizedPath) {
 					logger.warning(`Attempt to access invalid path ${filePath}`);
 					resp.writeHead(400, "Bad request");
 					resp.end("Invalid path");
+					return;
+				}
+
+				if (!vfs.exists(sanitizedPath)) {
+					logger.warning(`Attempt to access non-existent path ${filePath}`);
+					resp.writeHead(404, "Not found");
+					resp.end(`File ${filePath} not found`);
 					return;
 				}
 
@@ -184,11 +194,18 @@ class Mod implements IPreAkiLoadMod {
 					// biome-ignore lint/style/noNonNullAssertion: <explanation>
 					req.url.split("/modsync/server/fetch/").at(-1)!,
 				);
-				const sanitizedPath = sanitizeFilePath(filePath, "user", ["mods"]);
+				const sanitizedPath = sanitizeFilePath(filePath, serverDirs);
 				if (!sanitizedPath) {
 					logger.warning(`Attempt to access invalid path ${filePath}`);
 					resp.writeHead(400, "Bad request");
 					resp.end("Invalid path");
+					return;
+				}
+
+				if (!vfs.exists(sanitizedPath)) {
+					logger.warning(`Attempt to access non-existent path ${filePath}`);
+					resp.writeHead(404, "Not found");
+					resp.end(`File ${filePath} not found`);
 					return;
 				}
 

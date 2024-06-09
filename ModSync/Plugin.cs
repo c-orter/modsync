@@ -13,10 +13,8 @@ using BepInEx.Configuration;
 using BepInEx.Logging;
 using Comfort.Common;
 using EFT.UI;
-using HarmonyLib;
 using ModSync.UI;
 using UnityEngine;
-using BepInPaths = BepInEx.Paths;
 
 namespace ModSync
 {
@@ -27,11 +25,14 @@ namespace ModSync
         public bool nosync = nosync;
     }
 
-    [BepInPlugin("aaa.corter.modsync", "Corter ModSync", "0.2.1")]
+    [BepInPlugin("aaa.corter.modsync", "Corter ModSync", "0.3.0")]
     public class Plugin : BaseUnityPlugin
     {
         // Configuration
         private ConfigEntry<bool> configSyncServerMods;
+
+        private string[] clientDirs = [];
+        private string[] serverDirs = [];
 
         private Dictionary<string, ModFile> clientModDiff = [];
         private Dictionary<string, ModFile> serverModDiff = [];
@@ -45,28 +46,25 @@ namespace ModSync
 
         public static new ManualLogSource Logger = BepInEx.Logging.Logger.CreateLogSource("ModSync");
 
-        private KeyValuePair<string, ModFile> CreateModFile(string basePath, string file)
+        private KeyValuePair<string, ModFile> CreateModFile(string file)
         {
             var data = VFS.ReadFile(file);
-            var relativePath = file.Replace($"{basePath}\\", "");
+            var relativePath = file.Replace($"{Directory.GetCurrentDirectory()}\\", "");
 
             return new KeyValuePair<string, ModFile>(
                 relativePath,
                 new ModFile(
                     Crc32.Compute(data),
                     ((DateTimeOffset)File.GetLastWriteTimeUtc(file)).ToUnixTimeMilliseconds(),
-                    Utility.NoSyncInTree(basePath, relativePath) || VFS.Exists($"{file}.nosync") || VFS.Exists($"{file}.nosync.txt")
+                    Utility.NoSyncInTree(Directory.GetCurrentDirectory(), relativePath) || VFS.Exists($"{file}.nosync") || VFS.Exists($"{file}.nosync.txt")
                 )
             );
         }
 
-        private Dictionary<string, ModFile> HashLocalFiles(string baseDir, string[] subDirs)
+        private Dictionary<string, ModFile> HashLocalFiles(string[] dirs)
         {
-            var basePath = Path.Combine(Directory.GetCurrentDirectory(), baseDir);
-
-            return subDirs
-                .Select((subDir) => Path.Combine(basePath, subDir))
-                .SelectMany((path) => Utility.GetFilesInDir(path).AsParallel().Select((file) => CreateModFile(basePath, file)))
+            return dirs.Select((subDir) => Path.Combine(Directory.GetCurrentDirectory(), subDir))
+                .SelectMany((path) => Utility.GetFilesInDir(path).AsParallel().Select((file) => CreateModFile(file)))
                 .ToDictionary(item => item.Key, item => item.Value);
         }
 
@@ -106,18 +104,18 @@ namespace ModSync
             mismatchedMods = false;
         }
 
-        private void BackupModFolders(string baseDir, string[] subDirs, string tempDir)
+        private void BackupModFolders(string[] dirs, string tempDir)
         {
-            foreach (var subDir in subDirs)
+            foreach (var subDir in dirs)
             {
-                var sourceDir = Path.Combine(baseDir, subDir);
+                var sourceDir = Path.Combine(Directory.GetCurrentDirectory(), subDir);
                 var targetDir = Path.Combine(tempDir, subDir);
                 VFS.CreateDirectory(targetDir);
                 Utility.CopyFilesRecursively(sourceDir, targetDir);
             }
         }
 
-        private async Task DownloadMod(string file, string baseUrl, string baseDir, SemaphoreSlim limiter)
+        private async Task DownloadMod(string file, string baseUrl, SemaphoreSlim limiter)
         {
             await limiter.WaitAsync();
             if (cancelledUpdate)
@@ -125,17 +123,17 @@ namespace ModSync
 
             var data = await RequestHandler.GetDataAsync($"{baseUrl}/{file}");
 
-            var fullPath = Path.Combine(baseDir, file);
+            var fullPath = Path.Combine(Directory.GetCurrentDirectory(), file);
             if (cancelledUpdate)
                 return;
 
             await Utility.WriteFileAsync(fullPath, data);
         }
 
-        private async Task DownloadMods(Dictionary<string, ModFile> modDiff, string baseUrl, string baseDir)
+        private async Task DownloadMods(Dictionary<string, ModFile> modDiff, string baseUrl)
         {
             var limiter = new SemaphoreSlim(32, maxCount: 32);
-            var taskList = modDiff.Keys.Select((file) => DownloadMod(file, baseUrl, baseDir, limiter)).ToList();
+            var taskList = modDiff.Keys.Select((file) => DownloadMod(file, baseUrl, limiter)).ToList();
 
             while (taskList.Count > 0)
             {
@@ -153,34 +151,32 @@ namespace ModSync
             mismatchedMods = false;
             backupDir = Utility.GetTemporaryDirectory();
 
-            var clientBaseDir = Path.Combine(Directory.GetCurrentDirectory(), "BepInEx");
             var clientTempDir = Path.Combine(backupDir, "clientMods");
             VFS.CreateDirectory(clientTempDir);
-            BackupModFolders(clientBaseDir, ["plugins", "config"], clientTempDir);
+            BackupModFolders(clientDirs, clientTempDir);
 
             downloadCount = 0;
             downloadingMods = true;
-            await DownloadMods(clientModDiff, "/modsync/client/fetch", clientBaseDir);
+            await DownloadMods(clientModDiff, "/modsync/client/fetch");
 
             if (configSyncServerMods.Value && !cancelledUpdate)
             {
-                var serverBaseDir = Path.Combine(Directory.GetCurrentDirectory(), "user");
                 var serverTempDir = Path.Combine(backupDir, "serverMods");
                 VFS.CreateDirectory(serverTempDir);
-                BackupModFolders(serverBaseDir, ["mods"], serverTempDir);
-                await DownloadMods(serverModDiff, "/modsync/server/fetch", Path.Combine(Directory.GetCurrentDirectory(), "user"));
+                BackupModFolders(serverDirs, serverTempDir);
+                await DownloadMods(serverModDiff, "/modsync/server/fetch");
             }
 
             if (!cancelledUpdate)
                 restartRequired = true;
         }
 
-        private void RestoreBackup(string baseDir, string[] subDirs, string tempDir)
+        private void RestoreBackup(string[] dirs, string tempDir)
         {
-            foreach (var subDir in subDirs)
+            foreach (var subDir in dirs)
             {
                 var sourceDir = Path.Combine(tempDir, subDir);
-                var targetDir = Path.Combine(baseDir, subDir);
+                var targetDir = Path.Combine(Directory.GetCurrentDirectory(), subDir);
                 Directory.Delete(targetDir, true);
                 VFS.CreateDirectory(targetDir);
                 Utility.CopyFilesRecursively(sourceDir, targetDir);
@@ -194,15 +190,13 @@ namespace ModSync
             downloadingMods = false;
             cancelledUpdate = true;
 
-            var clientBaseDir = Path.Combine(Directory.GetCurrentDirectory(), "BepInEx");
             var clientTempDir = Path.Combine(backupDir, "clientMods");
-            RestoreBackup(clientBaseDir, ["plugins", "config"], clientTempDir);
+            RestoreBackup(clientDirs, clientTempDir);
 
             if (configSyncServerMods.Value)
             {
-                var serverBaseDir = Path.Combine(Directory.GetCurrentDirectory(), "user");
                 var serverTempDir = Path.Combine(backupDir, "serverMods");
-                RestoreBackup(serverBaseDir, ["mods"], serverTempDir);
+                RestoreBackup(serverDirs, serverTempDir);
             }
 
             Directory.Delete(backupDir, true);
@@ -223,8 +217,15 @@ namespace ModSync
         {
             configSyncServerMods = Config.Bind("General", "SyncServerMods", false, "Sync server mods to client");
 
-            var localClientFiles = HashLocalFiles("BepInEx", ["plugins", "config"]);
-            var localServerFiles = configSyncServerMods.Value ? HashLocalFiles("user", ["mods"]) : [];
+            clientDirs = Json.Deserialize<string[]>(RequestHandler.GetJson("/modsync/client/dirs"));
+            var localClientFiles = HashLocalFiles(clientDirs);
+
+            Dictionary<string, ModFile> localServerFiles = [];
+            if (configSyncServerMods.Value)
+            {
+                serverDirs = Json.Deserialize<string[]>(RequestHandler.GetJson("/modsync/server/dirs"));
+                localServerFiles = HashLocalFiles(serverDirs);
+            }
 
             Task.Run(async () =>
             {
@@ -303,33 +304,6 @@ namespace ModSync
                 if (Singleton<CommonUI>.Instantiated && !Singleton<CommonUI>.Instance.gameObject.activeSelf)
                     Singleton<CommonUI>.Instance.gameObject.SetActive(true);
             }
-
-            // {
-            //     if (_showMismatched && (clientModDiff.Count > 0 || (configSyncServerMods.Value && serverModDiff.Count > 0)))
-            //     {
-            //         _showMismatched = false;
-            //         Singleton<PreloaderUI>.Instance.ShowMismatchedModScreen(
-            //             "Installed mods do not match server.",
-            //             "Please wait {0} seconds before updating them.",
-            //             "(Click below to start update)",
-            //             "(Or click below to ignore updates)",
-            //             CONFIRMATION_DURATION,
-            //             () => Task.Run(() => SkipUpdatingMods()),
-            //             () => Task.Run(() => UpdateMods())
-            //         );
-            //     }
-            //     else if (_showProgress && (clientModDiff.Count > 0 || (configSyncServerMods.Value && serverModDiff.Count > 0)))
-            //     {
-            //         _showProgress = false;
-            //         Singleton<PreloaderUI>.Instance.ShowProgressScreen(
-            //             "Downloading mods from server...",
-            //             clientModDiff.Count + (configSyncServerMods.Value ? serverModDiff.Count : 0),
-            //             () => _downloaded,
-            //             () => Task.Run(() => CancelUpdatingMods()),
-            //             () => Task.Run(() => FinishUpdatingMods())
-            //         );
-            //     }
-            // }
         }
     }
 }
