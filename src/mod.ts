@@ -51,6 +51,32 @@ class Mod implements IPreAkiLoadMod {
 			serverDirs: string[];
 		} = require("./config.json");
 
+		if (
+			clientDirs.some(
+				(dir) =>
+					path.isAbsolute(dir) ||
+					path
+						.relative(process.cwd(), path.resolve(process.cwd(), dir))
+						.startsWith(".."),
+			)
+		)
+			logger.error(
+				"Invalid clientDirs in config.json. Ensure directories are relative to the SPT server directory (ie. BepInEx/plugins)",
+			);
+
+		if (
+			serverDirs.some(
+				(dir) =>
+					path.isAbsolute(dir) ||
+					path
+						.relative(process.cwd(), path.resolve(process.cwd(), dir))
+						.startsWith(".."),
+			)
+		)
+			logger.error(
+				"Invalid serverDirs in config.json. Ensure directories are relative to the SPT server directory (ie. user/mods)",
+			);
+
 		const getFileHashes = async (
 			dirs: string[],
 		): Promise<Record<string, { crc: number; modified: number }>> => {

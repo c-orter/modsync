@@ -218,12 +218,29 @@ namespace ModSync
             configSyncServerMods = Config.Bind("General", "SyncServerMods", false, "Sync server mods to client");
 
             clientDirs = Json.Deserialize<string[]>(RequestHandler.GetJson("/modsync/client/dirs"));
+
+            if (clientDirs.Any((dir) => Path.IsPathRooted(dir) || !Path.GetFullPath(dir).StartsWith(Directory.GetCurrentDirectory())))
+            {
+                Chainloader.DependencyErrors.Add(
+                    $"Could not load {Info.Metadata.Name} due to invalid client mod directory. Please ensure server configuration is not trying to validate files outside of the SPT directory"
+                );
+                return;
+            }
+
             var localClientFiles = HashLocalFiles(clientDirs);
 
             Dictionary<string, ModFile> localServerFiles = [];
             if (configSyncServerMods.Value)
             {
                 serverDirs = Json.Deserialize<string[]>(RequestHandler.GetJson("/modsync/server/dirs"));
+
+                if (serverDirs.Any((dir) => Path.IsPathRooted(dir) || !Path.GetFullPath(dir).StartsWith(Directory.GetCurrentDirectory())))
+                {
+                    Chainloader.DependencyErrors.Add(
+                        $"Could not load {Info.Metadata.Name} due to invalid server mod directory. Please ensure server configuration is not trying to validate files outside of the SPT directory"
+                    );
+                    return;
+                }
                 localServerFiles = HashLocalFiles(serverDirs);
             }
 
