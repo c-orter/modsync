@@ -25,7 +25,7 @@ namespace ModSync
         public bool nosync = nosync;
     }
 
-    [BepInPlugin("aaa.corter.modsync", "Corter ModSync", "0.3.1")]
+    [BepInPlugin("aaa.corter.modsync", "Corter ModSync", "0.3.2")]
     public class Plugin : BaseUnityPlugin
     {
         // Configuration
@@ -155,17 +155,19 @@ namespace ModSync
             VFS.CreateDirectory(clientTempDir);
             BackupModFolders(clientDirs, clientTempDir);
 
+            if (configSyncServerMods.Value)
+            {
+                var serverTempDir = Path.Combine(backupDir, "serverMods");
+                VFS.CreateDirectory(serverTempDir);
+                BackupModFolders(serverDirs, serverTempDir);
+            }
+
             downloadCount = 0;
             downloadingMods = true;
             await DownloadMods(clientModDiff, "/modsync/client/fetch");
 
             if (configSyncServerMods.Value && !cancelledUpdate)
-            {
-                var serverTempDir = Path.Combine(backupDir, "serverMods");
-                VFS.CreateDirectory(serverTempDir);
-                BackupModFolders(serverDirs, serverTempDir);
                 await DownloadMods(serverModDiff, "/modsync/server/fetch");
-            }
 
             if (!cancelledUpdate)
                 restartRequired = true;
