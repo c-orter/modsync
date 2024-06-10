@@ -105,4 +105,5 @@ served from `user/mods`.
 - [x] Ability to exclude files/folders from syncing from both client and server
 - [x] Custom folder sync support (May be useful for cached bundles? or mods that add files places that aren't BepInEx/plugins, BepInEx/config, or user/mods)
 - [x] Maybe cooler progress bar/custom UI (low priority)
+- [ ] Allow user to upload their local mods folders to host. (Needs some form of authorization, could be cool though)
 - [ ] Real tests?!? (low priority)
