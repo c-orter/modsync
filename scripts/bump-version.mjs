@@ -31,12 +31,28 @@ await Bun.write(
 	),
 );
 
-const assemblyInfoString = await Bun.file(
+const pluginAssemblyInfoString = await Bun.file(
 	"ModSync/Properties/AssemblyInfo.cs",
 ).text();
 await Bun.write(
 	"ModSync/Properties/AssemblyInfo.cs",
-	assemblyInfoString
+	pluginAssemblyInfoString
+		.replace(
+			`AssemblyVersion("${currentVersion}")`,
+			`AssemblyVersion("${newVersion}")`,
+		)
+		.replace(
+			`AssemblyFileVersion("${currentVersion}")`,
+			`AssemblyFileVersion("${newVersion}")`,
+		),
+);
+
+const patcherAssemblyInfoString = await Bun.file(
+	"ModSync.PrePatcher/Properties/AssemblyInfo.cs",
+).text();
+await Bun.write(
+	"ModSync.PrePatcher/Properties/AssemblyInfo.cs",
+	patcherAssemblyInfoString
 		.replace(
 			`AssemblyVersion("${currentVersion}")`,
 			`AssemblyVersion("${newVersion}")`,

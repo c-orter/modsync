@@ -25,7 +25,7 @@ namespace ModSync
         public bool nosync = nosync;
     }
 
-    [BepInPlugin("aaa.corter.modsync", "Corter ModSync", "0.3.2")]
+    [BepInPlugin("corter.modsync", "Corter ModSync", "0.4.0")]
     public class Plugin : BaseUnityPlugin
     {
         // Configuration
@@ -42,7 +42,7 @@ namespace ModSync
         private bool restartRequired = false;
         private bool cancelledUpdate = false;
         private int downloadCount = 0;
-        private string backupDir = string.Empty;
+        private string downloadDir = string.Empty;
 
         public static new ManualLogSource Logger = BepInEx.Logging.Logger.CreateLogSource("ModSync");
 
@@ -104,18 +104,7 @@ namespace ModSync
             mismatchedMods = false;
         }
 
-        private void BackupModFolders(string[] dirs, string tempDir)
-        {
-            foreach (var subDir in dirs)
-            {
-                var sourceDir = Path.Combine(Directory.GetCurrentDirectory(), subDir);
-                var targetDir = Path.Combine(tempDir, subDir);
-                VFS.CreateDirectory(targetDir);
-                Utility.CopyFilesRecursively(sourceDir, targetDir);
-            }
-        }
-
-        private async Task DownloadMod(string file, string baseUrl, SemaphoreSlim limiter)
+        private async Task DownloadMod(string file, string baseUrl, string downloadFolder, SemaphoreSlim limiter)
         {
             await limiter.WaitAsync();
             if (cancelledUpdate)
@@ -123,17 +112,24 @@ namespace ModSync
 
             var data = await RequestHandler.GetDataAsync($"{baseUrl}/{file}");
 
-            var fullPath = Path.Combine(Directory.GetCurrentDirectory(), file);
+            var fullPath = Path.Combine(downloadFolder, file);
             if (cancelledUpdate)
                 return;
 
-            await Utility.WriteFileAsync(fullPath, data);
+            try
+            {
+                await Utility.WriteFileAsync(fullPath, data);
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(e.Message);
+            }
         }
 
-        private async Task DownloadMods(Dictionary<string, ModFile> modDiff, string baseUrl)
+        private async Task DownloadMods(Dictionary<string, ModFile> modDiff, string baseUrl, string tempDir)
         {
             var limiter = new SemaphoreSlim(32, maxCount: 32);
-            var taskList = modDiff.Keys.Select((file) => DownloadMod(file, baseUrl, limiter)).ToList();
+            var taskList = modDiff.Keys.Select((file) => DownloadMod(file, baseUrl, tempDir, limiter)).ToList();
 
             while (taskList.Count > 0)
             {
@@ -149,42 +145,24 @@ namespace ModSync
         private async Task UpdateMods()
         {
             mismatchedMods = false;
-            backupDir = Utility.GetTemporaryDirectory();
+            downloadDir = Utility.GetTemporaryDirectory();
 
-            var clientTempDir = Path.Combine(backupDir, "clientMods");
-            VFS.CreateDirectory(clientTempDir);
-            BackupModFolders(clientDirs, clientTempDir);
+            var clientDownloadDir = Path.Combine(downloadDir, "clientMods");
+            VFS.CreateDirectory(clientDownloadDir);
 
+            var serverDownloadDir = Path.Combine(downloadDir, "serverMods");
             if (configSyncServerMods.Value)
-            {
-                var serverTempDir = Path.Combine(backupDir, "serverMods");
-                VFS.CreateDirectory(serverTempDir);
-                BackupModFolders(serverDirs, serverTempDir);
-            }
+                VFS.CreateDirectory(serverDownloadDir);
 
             downloadCount = 0;
             downloadingMods = true;
-            await DownloadMods(clientModDiff, "/modsync/client/fetch");
+            await DownloadMods(clientModDiff, "/modsync/client/fetch", clientDownloadDir);
 
             if (configSyncServerMods.Value && !cancelledUpdate)
-                await DownloadMods(serverModDiff, "/modsync/server/fetch");
+                await DownloadMods(serverModDiff, "/modsync/server/fetch", serverDownloadDir);
 
             if (!cancelledUpdate)
                 restartRequired = true;
-        }
-
-        private void RestoreBackup(string[] dirs, string tempDir)
-        {
-            foreach (var subDir in dirs)
-            {
-                var sourceDir = Path.Combine(tempDir, subDir);
-                var targetDir = Path.Combine(Directory.GetCurrentDirectory(), subDir);
-                Directory.Delete(targetDir, true);
-                VFS.CreateDirectory(targetDir);
-                Utility.CopyFilesRecursively(sourceDir, targetDir);
-            }
-
-            Directory.Delete(tempDir, true);
         }
 
         private void CancelUpdatingMods()
@@ -192,25 +170,24 @@ namespace ModSync
             downloadingMods = false;
             cancelledUpdate = true;
 
-            var clientTempDir = Path.Combine(backupDir, "clientMods");
-            RestoreBackup(clientDirs, clientTempDir);
+            var clientDownloadDir = Path.Combine(downloadDir, "clientMods");
+            Directory.Delete(clientDownloadDir, true);
 
             if (configSyncServerMods.Value)
             {
-                var serverTempDir = Path.Combine(backupDir, "serverMods");
-                RestoreBackup(serverDirs, serverTempDir);
+                var serverDownloadDir = Path.Combine(downloadDir, "serverMods");
+                Directory.Delete(serverDownloadDir, true);
             }
 
-            Directory.Delete(backupDir, true);
-            backupDir = string.Empty;
+            Directory.Delete(downloadDir, true);
+            downloadDir = string.Empty;
 
             showMenu = true;
         }
 
         private void FinishUpdatingMods()
         {
-            Directory.Delete(backupDir, true);
-            backupDir = string.Empty;
+            VFS.WriteTextFile(Path.Combine(Directory.GetCurrentDirectory(), ".pending-update"), downloadDir);
 
             Application.Quit();
         }
