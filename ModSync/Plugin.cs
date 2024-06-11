@@ -283,6 +283,7 @@ namespace ModSync
             {
                 if (Singleton<LoginUI>.Instantiated && Singleton<LoginUI>.Instance.gameObject.activeSelf)
                     Singleton<LoginUI>.Instance.gameObject.SetActive(false);
+
                 if (Singleton<PreloaderUI>.Instantiated && Singleton<PreloaderUI>.Instance.gameObject.activeSelf)
                     Singleton<PreloaderUI>.Instance.gameObject.SetActive(false);
 
@@ -293,6 +294,8 @@ namespace ModSync
             if (showMenu)
             {
                 showMenu = false;
+                if (Singleton<LoginUI>.Instantiated && !Singleton<LoginUI>.Instance.gameObject.activeSelf)
+                    Singleton<LoginUI>.Instance.gameObject.SetActive(true);
 
                 if (Singleton<PreloaderUI>.Instantiated && !Singleton<PreloaderUI>.Instance.gameObject.activeSelf)
                     Singleton<PreloaderUI>.Instance.gameObject.SetActive(true);
