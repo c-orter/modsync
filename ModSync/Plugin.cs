@@ -29,13 +29,9 @@ namespace ModSync
     public class Plugin : BaseUnityPlugin
     {
         // Configuration
-        private ConfigEntry<bool> configSyncServerMods;
-
-        private string[] clientDirs = [];
-        private string[] serverDirs = [];
-
-        private Dictionary<string, ModFile> clientModDiff = [];
-        private Dictionary<string, ModFile> serverModDiff = [];
+        Dictionary<string, ConfigEntry<bool>> configSyncPathToggles;
+        private string[] syncPaths = [];
+        private Dictionary<string, ModFile> fileHashDiff = [];
         private bool mismatchedMods = false;
         private bool showMenu = false;
         private bool downloadingMods = false;
@@ -79,23 +75,15 @@ namespace ModSync
                 .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
         }
 
-        private async Task CheckLocalMods(Dictionary<string, ModFile> localClientFiles, Dictionary<string, ModFile> localServerFiles)
+        private async Task CheckLocalMods(Dictionary<string, ModFile> localModFiles)
         {
-            var clientResponse = await RequestHandler.GetJsonAsync("/modsync/client/hashes");
-            var remoteClientFiles = Json.Deserialize<Dictionary<string, ModFile>>(clientResponse);
+            var clientResponse = await RequestHandler.GetJsonAsync("/modsync/hashes");
+            var remoteModFiles = Json.Deserialize<Dictionary<string, ModFile>>(clientResponse);
 
-            clientModDiff = CompareLocalFiles(localClientFiles, remoteClientFiles);
+            fileHashDiff = CompareLocalFiles(localModFiles, remoteModFiles);
 
-            if (configSyncServerMods.Value)
-            {
-                var serverResponse = await RequestHandler.GetJsonAsync("/modsync/server/hashes");
-                var remoteServerFiles = Json.Deserialize<Dictionary<string, ModFile>>(serverResponse);
-
-                serverModDiff = CompareLocalFiles(localServerFiles, remoteServerFiles);
-            }
-
-            Logger.LogInfo($"Found {clientModDiff.Count + serverModDiff.Count} files to download.");
-            mismatchedMods = clientModDiff.Count + serverModDiff.Count > 0;
+            Logger.LogInfo($"Found {fileHashDiff.Count} files to download.");
+            mismatchedMods = fileHashDiff.Count > 0;
         }
 
         private void SkipUpdatingMods()
@@ -104,14 +92,19 @@ namespace ModSync
             mismatchedMods = false;
         }
 
-        private void BackupModFolders(string[] dirs, string tempDir)
+        private void BackupModPath(string syncPath, string tempDir)
         {
-            foreach (var subDir in dirs)
+            var sourcePath = Path.Combine(Directory.GetCurrentDirectory(), syncPath);
+            var targetPath = Path.Combine(tempDir, syncPath);
+            Logger.LogWarning($"Backing up {sourcePath} to {targetPath}");
+            if (File.Exists(sourcePath))
             {
-                var sourceDir = Path.Combine(Directory.GetCurrentDirectory(), subDir);
-                var targetDir = Path.Combine(tempDir, subDir);
-                VFS.CreateDirectory(targetDir);
-                Utility.CopyFilesRecursively(sourceDir, targetDir);
+                File.Copy(sourcePath, targetPath);
+            }
+            else if (Directory.Exists(sourcePath))
+            {
+                VFS.CreateDirectory(targetPath);
+                Utility.CopyFilesRecursively(sourcePath, targetPath);
             }
         }
 
@@ -124,6 +117,7 @@ namespace ModSync
             var data = await RequestHandler.GetDataAsync($"{baseUrl}/{file}");
 
             var fullPath = Path.Combine(Directory.GetCurrentDirectory(), file);
+            Logger.LogWarning($"Downloading {file} to {fullPath}");
             if (cancelledUpdate)
                 return;
 
@@ -150,41 +144,36 @@ namespace ModSync
         {
             mismatchedMods = false;
             backupDir = Utility.GetTemporaryDirectory();
+            Logger.LogWarning($"Running backup to {backupDir}");
 
-            var clientTempDir = Path.Combine(backupDir, "clientMods");
-            VFS.CreateDirectory(clientTempDir);
-            BackupModFolders(clientDirs, clientTempDir);
+            foreach (var syncPath in syncPaths.Where((syncPath) => configSyncPathToggles[syncPath].Value))
+                BackupModPath(syncPath, backupDir);
 
-            if (configSyncServerMods.Value)
-            {
-                var serverTempDir = Path.Combine(backupDir, "serverMods");
-                VFS.CreateDirectory(serverTempDir);
-                BackupModFolders(serverDirs, serverTempDir);
-            }
+            Logger.LogWarning("Finished backup");
 
             downloadCount = 0;
             downloadingMods = true;
-            await DownloadMods(clientModDiff, "/modsync/client/fetch");
-
-            if (configSyncServerMods.Value && !cancelledUpdate)
-                await DownloadMods(serverModDiff, "/modsync/server/fetch");
+            await DownloadMods(fileHashDiff, "/modsync/fetch");
 
             if (!cancelledUpdate)
                 restartRequired = true;
         }
 
-        private void RestoreBackup(string[] dirs, string tempDir)
+        private void RestoreBackup(string syncPath, string tempDir)
         {
-            foreach (var subDir in dirs)
+            var sourcePath = Path.Combine(tempDir, syncPath);
+            var targetPath = Path.Combine(Directory.GetCurrentDirectory(), syncPath);
+            if (File.Exists(sourcePath))
             {
-                var sourceDir = Path.Combine(tempDir, subDir);
-                var targetDir = Path.Combine(Directory.GetCurrentDirectory(), subDir);
-                Directory.Delete(targetDir, true);
-                VFS.CreateDirectory(targetDir);
-                Utility.CopyFilesRecursively(sourceDir, targetDir);
+                File.Delete(targetPath);
+                File.Copy(sourcePath, targetPath);
             }
-
-            Directory.Delete(tempDir, true);
+            else
+            {
+                Directory.Delete(targetPath, true);
+                VFS.CreateDirectory(targetPath);
+                Utility.CopyFilesRecursively(sourcePath, targetPath);
+            }
         }
 
         private void CancelUpdatingMods()
@@ -192,14 +181,8 @@ namespace ModSync
             downloadingMods = false;
             cancelledUpdate = true;
 
-            var clientTempDir = Path.Combine(backupDir, "clientMods");
-            RestoreBackup(clientDirs, clientTempDir);
-
-            if (configSyncServerMods.Value)
-            {
-                var serverTempDir = Path.Combine(backupDir, "serverMods");
-                RestoreBackup(serverDirs, serverTempDir);
-            }
+            foreach (var subDir in syncPaths.Where((subDir) => configSyncPathToggles[subDir].Value))
+                RestoreBackup(subDir, backupDir);
 
             Directory.Delete(backupDir, true);
             backupDir = string.Empty;
@@ -217,11 +200,9 @@ namespace ModSync
 
         private void Awake()
         {
-            configSyncServerMods = Config.Bind("General", "SyncServerMods", false, "Sync server mods to client");
+            syncPaths = Json.Deserialize<string[]>(RequestHandler.GetJson("/modsync/paths"));
 
-            clientDirs = Json.Deserialize<string[]>(RequestHandler.GetJson("/modsync/client/dirs"));
-
-            if (clientDirs.Any((dir) => Path.IsPathRooted(dir) || !Path.GetFullPath(dir).StartsWith(Directory.GetCurrentDirectory())))
+            if (syncPaths.Any((dir) => Path.IsPathRooted(dir) || !Path.GetFullPath(dir).StartsWith(Directory.GetCurrentDirectory())))
             {
                 Chainloader.DependencyErrors.Add(
                     $"Could not load {Info.Metadata.Name} due to invalid client mod directory. Please ensure server configuration is not trying to validate files outside of the SPT directory"
@@ -229,22 +210,21 @@ namespace ModSync
                 return;
             }
 
-            var localClientFiles = HashLocalFiles(clientDirs);
+            configSyncPathToggles = syncPaths
+                .Select(
+                    (syncPath) =>
+                        new KeyValuePair<string, ConfigEntry<bool>>(
+                            syncPath,
+                            Config.Bind("Synced Paths", syncPath.Replace("\\", "/"), true, $"Should the mod attempt to sync files from {syncPath}")
+                        )
+                )
+                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 
-            Dictionary<string, ModFile> localServerFiles = [];
-            if (configSyncServerMods.Value)
-            {
-                serverDirs = Json.Deserialize<string[]>(RequestHandler.GetJson("/modsync/server/dirs"));
-
-                if (serverDirs.Any((dir) => Path.IsPathRooted(dir) || !Path.GetFullPath(dir).StartsWith(Directory.GetCurrentDirectory())))
-                {
-                    Chainloader.DependencyErrors.Add(
-                        $"Could not load {Info.Metadata.Name} due to invalid server mod directory. Please ensure server configuration is not trying to validate files outside of the SPT directory"
-                    );
-                    return;
-                }
-                localServerFiles = HashLocalFiles(serverDirs);
-            }
+            var localModFiles = HashLocalFiles(
+                syncPaths
+                    .Where((syncPath) => configSyncPathToggles[syncPath].Value && VFS.Exists(Path.Combine(Directory.GetCurrentDirectory(), syncPath)))
+                    .ToArray()
+            );
 
             Task.Run(async () =>
             {
@@ -264,7 +244,7 @@ namespace ModSync
 
                 try
                 {
-                    await CheckLocalMods(localClientFiles, localServerFiles);
+                    await CheckLocalMods(localModFiles);
                 }
                 catch (Exception e)
                 {
@@ -283,7 +263,7 @@ namespace ModSync
         private void Start()
         {
             alertWindow = new AlertWindow("Installed mods do not match server", "Would you like to update?");
-            progressWindow = new ProgressWindow("Downloading Updates...", "Your game will need to be restarted\nafter update completes.");
+            progressWindow = new ProgressWindow("Downloading Updates...", "Your game will need to be restarted\nafter updates complete.");
             restartWindow = new RestartWindow("Update Complete.", "Please restart your game to continue.");
         }
 
@@ -294,7 +274,7 @@ namespace ModSync
                 if (restartRequired)
                     restartWindow.Draw(FinishUpdatingMods);
                 else if (downloadingMods)
-                    progressWindow.Draw(downloadCount, clientModDiff.Count + serverModDiff.Count, CancelUpdatingMods);
+                    progressWindow.Draw(downloadCount, fileHashDiff.Count, CancelUpdatingMods);
                 else if (mismatchedMods)
                     alertWindow.Draw(() => Task.Run(() => UpdateMods()), SkipUpdatingMods);
             }

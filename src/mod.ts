@@ -13,9 +13,7 @@ import type { VFS } from "@spt-aki/utils/VFS";
 class Mod implements IPreAkiLoadMod {
 	private static container: DependencyContainer;
 
-	private clientModLastUpdated = 0;
-	private clientModHashes?: Record<string, { crc: number; modified: number }>;
-	private serverModHashes?: Record<string, { crc: number; modified: number }>;
+	private fileHashes?: Record<string, { crc: number; modified: number }>;
 
 	public preAkiLoad(container: DependencyContainer): void {
 		Mod.container = container;
@@ -43,42 +41,25 @@ class Mod implements IPreAkiLoadMod {
 		const hashUtil = Mod.container.resolve<HashUtil>("HashUtil");
 		const httpFileUtil = Mod.container.resolve<HttpFileUtil>("HttpFileUtil");
 
-		const {
-			clientDirs,
-			serverDirs,
-		}: {
-			clientDirs: string[];
-			serverDirs: string[];
-		} = require("./config.json");
+		const syncPaths = (
+			require("./config.json") as { syncPaths: string[] }
+		).syncPaths.map((syncPath) => path.normalize(syncPath));
 
 		if (
-			clientDirs.some(
-				(dir) =>
-					path.isAbsolute(dir) ||
+			syncPaths.some(
+				(syncPath) =>
+					path.isAbsolute(syncPath) ||
 					path
-						.relative(process.cwd(), path.resolve(process.cwd(), dir))
+						.relative(process.cwd(), path.resolve(process.cwd(), syncPath))
 						.startsWith(".."),
 			)
 		)
 			logger.error(
-				"Invalid clientDirs in config.json. Ensure directories are relative to the SPT server directory (ie. BepInEx/plugins)",
-			);
-
-		if (
-			serverDirs.some(
-				(dir) =>
-					path.isAbsolute(dir) ||
-					path
-						.relative(process.cwd(), path.resolve(process.cwd(), dir))
-						.startsWith(".."),
-			)
-		)
-			logger.error(
-				"Invalid serverDirs in config.json. Ensure directories are relative to the SPT server directory (ie. user/mods)",
+				"Invalid syncPaths in config.json. Ensure directories are relative to the SPT server directory (ie. BepInEx/plugins)",
 			);
 
 		const getFileHashes = async (
-			dirs: string[],
+			syncPaths: string[],
 		): Promise<Record<string, { crc: number; modified: number }>> => {
 			const getFilesInDir = (dir: string): string[] => {
 				try {
@@ -112,7 +93,7 @@ class Mod implements IPreAkiLoadMod {
 				const modified = fs.statSync(file).mtime;
 
 				// biome-ignore lint/style/noNonNullAssertion: <explanation>
-				const dir = dirs.find(
+				const dir = syncPaths.find(
 					(dir) => !path.relative(dir, file).startsWith(".."),
 				)!;
 
@@ -127,14 +108,21 @@ class Mod implements IPreAkiLoadMod {
 				];
 			};
 
-			return Object.assign(
-				{},
+			const dirs = syncPaths.filter((syncPath) =>
+				fs.lstatSync(syncPath).isDirectory(),
+			);
+			const files = syncPaths.filter((syncPath) =>
+				fs.lstatSync(syncPath).isFile(),
+			);
+
+			return Object.fromEntries([
+				...files
+					.map((file) => path.join(process.cwd(), file))
+					.map(buildModFile),
 				...dirs
 					.map((dir) => path.join(process.cwd(), dir))
-					.map((dir) =>
-						Object.fromEntries(getFilesInDir(dir).map(buildModFile)),
-					),
-			);
+					.flatMap((dir) => getFilesInDir(dir).map(buildModFile)),
+			]);
 		};
 
 		const sanitizeFilePath = (file: string, allowedSubDirs: string[]) => {
@@ -160,67 +148,23 @@ class Mod implements IPreAkiLoadMod {
 				resp.setHeader("Content-Type", "application/json");
 				resp.writeHead(200, "OK");
 				resp.end(JSON.stringify({ version: packageJson.version }));
-			} else if (req.url === "/modsync/client/dirs") {
+			} else if (req.url === "/modsync/paths") {
 				resp.setHeader("Content-Type", "application/json");
 				resp.writeHead(200, "OK");
-				resp.end(JSON.stringify(clientDirs));
-			} else if (req.url === "/modsync/server/dirs") {
-				resp.setHeader("Content-Type", "application/json");
-				resp.writeHead(200, "OK");
-				resp.end(JSON.stringify(serverDirs));
-			} else if (req.url === "/modsync/client/hashes") {
-				const clientModUpdated = Math.max(
-					...clientDirs.map((dir) => fs.statSync(dir).mtimeMs),
-				);
-
-				if (
-					this.clientModHashes === undefined ||
-					clientModUpdated > this.clientModLastUpdated
-				) {
-					this.clientModLastUpdated = clientModUpdated;
-
-					this.clientModHashes = await getFileHashes(clientDirs);
-				}
+				resp.end(JSON.stringify(syncPaths));
+			} else if (req.url === "/modsync/hashes") {
+				if (!this.fileHashes) this.fileHashes = await getFileHashes(syncPaths);
 
 				resp.setHeader("Content-Type", "application/json");
 				resp.writeHead(200, "OK");
-				resp.end(JSON.stringify(this.clientModHashes));
-			} else if (req.url === "/modsync/server/hashes") {
-				if (this.serverModHashes === undefined) {
-					this.serverModHashes = await getFileHashes(serverDirs);
-				}
-
-				resp.setHeader("Content-Type", "application/json");
-				resp.writeHead(200, "OK");
-				resp.end(JSON.stringify(this.serverModHashes));
-			} else if (req.url?.startsWith("/modsync/client/fetch/")) {
+				resp.end(JSON.stringify(this.fileHashes));
+			} else if (req.url?.startsWith("/modsync/fetch/")) {
 				const filePath = decodeURIComponent(
 					// biome-ignore lint/style/noNonNullAssertion: <explanation>
-					req.url.split("/modsync/client/fetch/").at(-1)!,
+					req.url.split("/modsync/fetch/").at(-1)!,
 				);
 
-				const sanitizedPath = sanitizeFilePath(filePath, clientDirs);
-				if (!sanitizedPath) {
-					logger.warning(`Attempt to access invalid path ${filePath}`);
-					resp.writeHead(400, "Bad request");
-					resp.end("Invalid path");
-					return;
-				}
-
-				if (!vfs.exists(sanitizedPath)) {
-					logger.warning(`Attempt to access non-existent path ${filePath}`);
-					resp.writeHead(404, "Not found");
-					resp.end(`File ${filePath} not found`);
-					return;
-				}
-
-				httpFileUtil.sendFile(resp, sanitizedPath);
-			} else if (req.url?.startsWith("/modsync/server/fetch/")) {
-				const filePath = decodeURIComponent(
-					// biome-ignore lint/style/noNonNullAssertion: <explanation>
-					req.url.split("/modsync/server/fetch/").at(-1)!,
-				);
-				const sanitizedPath = sanitizeFilePath(filePath, serverDirs);
+				const sanitizedPath = sanitizeFilePath(filePath, syncPaths);
 				if (!sanitizedPath) {
 					logger.warning(`Attempt to access invalid path ${filePath}`);
 					resp.writeHead(400, "Bad request");

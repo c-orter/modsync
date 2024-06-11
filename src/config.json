@@ -1,4 +1,3 @@
 {
-    "clientDirs": ["BepInEx/plugins", "BepInEx/config"],
-    "serverDirs": ["user/mods"]
+	"syncPaths": ["BepInEx/plugins", "BepInEx/config", "user/mods"]
 }
