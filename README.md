@@ -25,7 +25,7 @@ This project allows clients to easily synchronize mods between server and client
 
 ### Server Setup
 
-1. Download the latest version of the server mod from the [GitHub Releases](https://github.com/Corter/ModSync/releases) page
+1. Download the latest version of the server mod from the [GitHub Releases](https://github.com/c-orter/modsync/releases) page
 2. Extract into your SPT folder like any other server mod
 3. Start the server
 
@@ -33,7 +33,7 @@ This project allows clients to easily synchronize mods between server and client
 
 ### Client Setup
 
-1. Download the latest version of the client mod from the [GitHub Releases](https://github.com/Corter/ModSync/releases) page
+1. Download the latest version of the client mod from the [GitHub Releases](https://github.com/c-orter/modsync/releases) page
 2. Extract into your SPT/Fika folder like any other client mod
 3. Start the client and enjoy!
 
