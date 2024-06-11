@@ -42,16 +42,17 @@ This project allows clients to easily synchronize mods between server and client
 
 ### Server
 
-> Modify `config.json` in user/mods/corter-modsync
+> Modify `config.jsonc` in user/mods/corter-modsync
 
 | Configuration | Description | Default |
 | --- | --- | --- |
 | `clientDirs` | List of client directories to sync | `["BepInEx/plugins", "BepInEx/config"]` |
 | `serverDirs` | List of server directories to sync | `["user/mods"]` |
+| `commonModExclusions` | List of files from common mods that should be excluded from syncing | See [config.json](src/config.jsonc) |
 
 ### Client
 
-> Modify `aaa.corter.modsync.cfg` in BepInEx/config or use the config manager with F12
+> Modify `corter.modsync.cfg` in BepInEx/config or use the config manager with F12
 
 | Configuration | Description | Default |
 | --- | --- | --- |

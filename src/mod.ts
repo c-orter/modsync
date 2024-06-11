@@ -9,6 +9,7 @@ import type { HttpListenerModService } from "@spt-aki/services/mod/httpListener/
 import type { HashUtil } from "@spt-aki/utils/HashUtil";
 import type { HttpFileUtil } from "@spt-aki/utils/HttpFileUtil";
 import type { VFS } from "@spt-aki/utils/VFS";
+import type { JsonUtil } from "@spt-aki/utils/JsonUtil";
 
 class Mod implements IPreAkiLoadMod {
 	private static container: DependencyContainer;
@@ -42,14 +43,27 @@ class Mod implements IPreAkiLoadMod {
 		const vfs = Mod.container.resolve<VFS>("VFS");
 		const hashUtil = Mod.container.resolve<HashUtil>("HashUtil");
 		const httpFileUtil = Mod.container.resolve<HttpFileUtil>("HttpFileUtil");
+		const jsonUtil = Mod.container.resolve<JsonUtil>("JsonUtil");
 
-		const {
-			clientDirs,
-			serverDirs,
-		}: {
-			clientDirs: string[];
-			serverDirs: string[];
-		} = require("./config.json");
+		const { clientDirs, serverDirs, commonModExclusions } =
+			jsonUtil.deserializeJsonC<{
+				clientDirs: string[];
+				serverDirs: string[];
+				commonModExclusions: string[];
+			}>(
+				await vfs.readFileAsync(path.join(__dirname, "config.jsonc")),
+				"config.jsonc",
+			);
+
+		const commonModExclusionsRegex = commonModExclusions.map(
+			(exclusion) =>
+				new RegExp(
+					exclusion
+						.split(path.posix.sep)
+						.join(path.sep)
+						.replaceAll("\\", "\\\\"),
+				),
+		);
 
 		if (
 			clientDirs.some(
@@ -92,16 +106,22 @@ class Mod implements IPreAkiLoadMod {
 									!file.endsWith(".nosync.txt") &&
 									!vfs.exists(`${file}.nosync`) &&
 									!vfs.exists(`${file}.nosync.txt`) &&
-									path.basename(file) !== "Corter-ModSync.dll",
+									!commonModExclusionsRegex.some((exclusion) =>
+										exclusion.test(file),
+									),
 							),
 						...vfs
 							.getDirs(dir)
+							.map((subDir) => path.join(dir, subDir))
 							.filter(
 								(subDir) =>
-									!vfs.exists(path.join(dir, subDir, ".nosync")) &&
-									!vfs.exists(path.join(dir, subDir, ".nosync.txt")),
+									!vfs.exists(path.join(subDir, ".nosync")) &&
+									!vfs.exists(path.join(subDir, ".nosync.txt")) &&
+									!commonModExclusionsRegex.some((exclusion) =>
+										exclusion.test(subDir),
+									),
 							)
-							.flatMap((subDir) => getFilesInDir(path.join(dir, subDir))),
+							.flatMap((subDir) => getFilesInDir(subDir)),
 					];
 				} catch {
 					return [];
@@ -117,7 +137,10 @@ class Mod implements IPreAkiLoadMod {
 				)!;
 
 				return [
-					path.join(dir, path.relative(dir, file)),
+					path
+						.join(dir, path.relative(dir, file))
+						.split(path.sep)
+						.join(path.win32.sep),
 					{
 						crc: hashUtil.generateCRC32ForFile(file),
 						modified: new Date(
@@ -163,11 +186,23 @@ class Mod implements IPreAkiLoadMod {
 			} else if (req.url === "/modsync/client/dirs") {
 				resp.setHeader("Content-Type", "application/json");
 				resp.writeHead(200, "OK");
-				resp.end(JSON.stringify(clientDirs));
+				resp.end(
+					JSON.stringify(
+						clientDirs.map((dir) =>
+							dir.split(path.posix.sep).join(path.win32.sep),
+						),
+					),
+				);
 			} else if (req.url === "/modsync/server/dirs") {
 				resp.setHeader("Content-Type", "application/json");
 				resp.writeHead(200, "OK");
-				resp.end(JSON.stringify(serverDirs));
+				resp.end(
+					JSON.stringify(
+						serverDirs.map((dir) =>
+							dir.split(path.posix.sep).join(path.win32.sep),
+						),
+					),
+				);
 			} else if (req.url === "/modsync/client/hashes") {
 				const clientModUpdated = Math.max(
 					...clientDirs.map((dir) => fs.statSync(dir).mtimeMs),

@@ -1,0 +1,20 @@
+{
+	"clientDirs": ["BepInEx/plugins", "BepInEx/patchers", "BepInEx/config"],
+	"serverDirs": ["user/mods"],
+	"commonModExclusions": [
+		// Corter-ModSync
+		"BepInEx/plugins/Corter-ModSync.dll",
+		"BepInEx/patchers/Corter-ModSync-Patcher.dll",
+		// Questing Bots
+		"BepInEx/plugins/DanW-SPTQuestingBots/log",
+		// Realism
+		"user/mods/SPT-Realism/ProfileBackups",
+		// Fika
+		"user/mods/fika-server/types",
+		// General server mods
+		"user/mods/.*/.git",
+		"user/mods/.*/node_modules",
+		"user/mods/.*/[^/]*.js",
+		"user/mods/.*/[^/]*.js.map"
+	]
+}

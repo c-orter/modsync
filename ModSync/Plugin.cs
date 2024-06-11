@@ -151,15 +151,16 @@ namespace ModSync
             VFS.CreateDirectory(clientDownloadDir);
 
             var serverDownloadDir = Path.Combine(downloadDir, "serverMods");
-            if (configSyncServerMods.Value)
-                VFS.CreateDirectory(serverDownloadDir);
 
             downloadCount = 0;
             downloadingMods = true;
             await DownloadMods(clientModDiff, "/modsync/client/fetch", clientDownloadDir);
 
             if (configSyncServerMods.Value && !cancelledUpdate)
+            {
+                VFS.CreateDirectory(serverDownloadDir);
                 await DownloadMods(serverModDiff, "/modsync/server/fetch", serverDownloadDir);
+            }
 
             if (!cancelledUpdate)
                 restartRequired = true;

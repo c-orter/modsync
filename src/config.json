@@ -1,4 +1,0 @@
-{
-    "clientDirs": ["BepInEx/plugins", "BepInEx/config"],
-    "serverDirs": ["user/mods"]
-}
