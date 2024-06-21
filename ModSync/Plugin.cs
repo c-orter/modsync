@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Aki.Common.Http;
 using Aki.Common.Utils;
-using Aki.Custom.Utils;
 using BepInEx;
 using BepInEx.Bootstrap;
 using BepInEx.Configuration;
@@ -18,118 +18,90 @@ using UnityEngine;
 
 namespace ModSync
 {
-    internal class ModFile(uint crc, long modified, bool nosync = false)
-    {
-        public uint crc = crc;
-        public long modified = modified;
-        public bool nosync = nosync;
-    }
-
-    [BepInPlugin("corter.modsync", "Corter ModSync", "0.4.0")]
+    [BepInPlugin("corter.modsync", "Corter ModSync", "0.5.0")]
     public class Plugin : BaseUnityPlugin
     {
         // Configuration
-        private ConfigEntry<bool> configSyncServerMods;
+        Dictionary<string, ConfigEntry<bool>> configSyncPathToggles;
+        ConfigEntry<bool> configDeleteRemovedFiles;
 
-        private string[] clientDirs = [];
-        private string[] serverDirs = [];
+        private Persist persist;
+        private string[] syncPaths = [];
+        private Dictionary<string, ModFile> remoteModFiles = [];
+        private List<string> addedFiles = [];
+        private List<string> updatedFiles = [];
+        private List<string> removedFiles = [];
 
-        private Dictionary<string, ModFile> clientModDiff = [];
-        private Dictionary<string, ModFile> serverModDiff = [];
-        private bool mismatchedMods = false;
-        private bool showMenu = false;
-        private bool downloadingMods = false;
-        private bool restartRequired = false;
+        private int UpdateCount => addedFiles.Count + updatedFiles.Count + removedFiles.Count;
+        private bool pluginFinished = false;
         private bool cancelledUpdate = false;
         private int downloadCount = 0;
         private string downloadDir = string.Empty;
 
         public static new ManualLogSource Logger = BepInEx.Logging.Logger.CreateLogSource("ModSync");
 
-        private KeyValuePair<string, ModFile> CreateModFile(string file)
+        private List<string> EnabledSyncPaths => syncPaths.Where((syncPath) => configSyncPathToggles[syncPath].Value).ToList();
+
+        private void CheckLocalMods(Dictionary<string, ModFile> localModFiles)
         {
-            var data = VFS.ReadFile(file);
-            var relativePath = file.Replace($"{Directory.GetCurrentDirectory()}\\", "");
+            var syncResponse = RequestHandler.GetJson("/modsync/hashes");
+            remoteModFiles = Json.Deserialize<Dictionary<string, ModFile>>(syncResponse);
 
-            return new KeyValuePair<string, ModFile>(
-                relativePath,
-                new ModFile(
-                    Crc32.Compute(data),
-                    ((DateTimeOffset)File.GetLastWriteTimeUtc(file)).ToUnixTimeMilliseconds(),
-                    Utility.NoSyncInTree(Directory.GetCurrentDirectory(), relativePath) || VFS.Exists($"{file}.nosync") || VFS.Exists($"{file}.nosync.txt")
-                )
-            );
-        }
+            addedFiles = Sync.GetAddedFiles(localModFiles, remoteModFiles);
+            updatedFiles = Sync.GetUpdatedFiles(localModFiles, remoteModFiles, persist.previousSync);
 
-        private Dictionary<string, ModFile> HashLocalFiles(string[] dirs)
-        {
-            return dirs.Select((subDir) => Path.Combine(Directory.GetCurrentDirectory(), subDir))
-                .SelectMany((path) => Utility.GetFilesInDir(path).AsParallel().Select((file) => CreateModFile(file)))
-                .ToDictionary(item => item.Key, item => item.Value);
-        }
+            if (configDeleteRemovedFiles.Value)
+                removedFiles = Sync.GetRemovedFiles(localModFiles, remoteModFiles, persist.previousSync);
 
-        private Dictionary<string, ModFile> CompareLocalFiles(Dictionary<string, ModFile> localFiles, Dictionary<string, ModFile> remoteFiles)
-        {
-            return remoteFiles
-                .Where(
-                    (kvp) =>
-                        !localFiles.ContainsKey(kvp.Key)
-                        || (!localFiles[kvp.Key].nosync && kvp.Value.crc != localFiles[kvp.Key].crc && kvp.Value.modified > localFiles[kvp.Key].modified)
-                )
-                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-        }
+            Logger.LogInfo($"Found {UpdateCount} files to download.");
+            Logger.LogInfo($"- {addedFiles.Count} added");
+            Logger.LogInfo($"- {updatedFiles.Count} updated");
+            if (configDeleteRemovedFiles.Value)
+                Logger.LogInfo($"- {removedFiles.Count} removed");
 
-        private async Task CheckLocalMods(Dictionary<string, ModFile> localClientFiles, Dictionary<string, ModFile> localServerFiles)
-        {
-            var clientResponse = await RequestHandler.GetJsonAsync("/modsync/client/hashes");
-            var remoteClientFiles = Json.Deserialize<Dictionary<string, ModFile>>(clientResponse);
-
-            clientModDiff = CompareLocalFiles(localClientFiles, remoteClientFiles);
-
-            if (configSyncServerMods.Value)
-            {
-                var serverResponse = await RequestHandler.GetJsonAsync("/modsync/server/hashes");
-                var remoteServerFiles = Json.Deserialize<Dictionary<string, ModFile>>(serverResponse);
-
-                serverModDiff = CompareLocalFiles(localServerFiles, remoteServerFiles);
-            }
-
-            Logger.LogInfo($"Found {clientModDiff.Count + serverModDiff.Count} files to download.");
-            mismatchedMods = clientModDiff.Count + serverModDiff.Count > 0;
+            if (UpdateCount > 0)
+                alertWindow.Show();
         }
 
         private void SkipUpdatingMods()
         {
-            showMenu = true;
-            mismatchedMods = false;
+            pluginFinished = true;
+            alertWindow.Hide();
         }
 
-        private async Task DownloadMod(string file, string baseUrl, string downloadFolder, SemaphoreSlim limiter)
+        private async Task DownloadFile(string file, SemaphoreSlim limiter)
         {
-            await limiter.WaitAsync();
-            if (cancelledUpdate)
-                return;
-
-            var data = await RequestHandler.GetDataAsync($"{baseUrl}/{file}");
-
-            var fullPath = Path.Combine(downloadFolder, file);
-            if (cancelledUpdate)
-                return;
+            var downloadPath = Path.Combine(downloadDir, file);
+            VFS.CreateDirectory(downloadPath.GetDirectory());
 
             try
             {
-                await Utility.WriteFileAsync(fullPath, data);
+                await limiter.WaitAsync();
+                using var client = new HttpClient();
+                using var fileStream = new FileStream(downloadPath, FileMode.CreateNew);
+                using var responseStream = await client.GetStreamAsync($@"{RequestHandler.Host}/modsync/fetch/{file}");
+
+                await responseStream.CopyToAsync(fileStream);
             }
             catch (Exception e)
             {
-                Logger.LogError(e.Message);
+                Logger.LogError(e);
             }
         }
 
-        private async Task DownloadMods(Dictionary<string, ModFile> modDiff, string baseUrl, string tempDir)
+        private async Task SyncMods()
         {
+            alertWindow.Hide();
+            downloadDir = Utility.GetTemporaryDirectory();
+
+            VFS.CreateDirectory(downloadDir);
+
+            downloadCount = 0;
+            progressWindow.Show();
+
             var limiter = new SemaphoreSlim(32, maxCount: 32);
-            var taskList = modDiff.Keys.Select((file) => DownloadMod(file, baseUrl, tempDir, limiter)).ToList();
+
+            var taskList = addedFiles.Union(updatedFiles).Select((file) => DownloadFile(file, limiter)).ToList();
 
             while (taskList.Count > 0)
             {
@@ -139,148 +111,160 @@ namespace ModSync
                 downloadCount++;
             }
 
-            limiter.Dispose();
-        }
-
-        private async Task UpdateMods()
-        {
-            mismatchedMods = false;
-            downloadDir = Utility.GetTemporaryDirectory();
-
-            var clientDownloadDir = Path.Combine(downloadDir, "clientMods");
-            VFS.CreateDirectory(clientDownloadDir);
-
-            var serverDownloadDir = Path.Combine(downloadDir, "serverMods");
-
-            downloadCount = 0;
-            downloadingMods = true;
-            await DownloadMods(clientModDiff, "/modsync/client/fetch", clientDownloadDir);
-
-            if (configSyncServerMods.Value && !cancelledUpdate)
-            {
-                VFS.CreateDirectory(serverDownloadDir);
-                await DownloadMods(serverModDiff, "/modsync/server/fetch", serverDownloadDir);
-            }
-
+            progressWindow.Hide();
             if (!cancelledUpdate)
-                restartRequired = true;
+                restartWindow.Show();
         }
 
         private void CancelUpdatingMods()
         {
-            downloadingMods = false;
+            progressWindow.Hide();
             cancelledUpdate = true;
-
-            var clientDownloadDir = Path.Combine(downloadDir, "clientMods");
-            Directory.Delete(clientDownloadDir, true);
-
-            if (configSyncServerMods.Value)
-            {
-                var serverDownloadDir = Path.Combine(downloadDir, "serverMods");
-                Directory.Delete(serverDownloadDir, true);
-            }
 
             Directory.Delete(downloadDir, true);
             downloadDir = string.Empty;
 
-            showMenu = true;
+            pluginFinished = true;
         }
 
         private void FinishUpdatingMods()
         {
-            VFS.WriteTextFile(Path.Combine(Directory.GetCurrentDirectory(), ".pending-update"), downloadDir);
+            Persist persist =
+                new()
+                {
+                    previousSync = remoteModFiles,
+                    downloadDir = downloadDir,
+                    filesToDelete = configDeleteRemovedFiles.Value ? removedFiles : []
+                };
+
+            VFS.WriteTextFile(Path.Combine(Directory.GetCurrentDirectory(), ".modsync"), Json.Serialize(persist));
 
             Application.Quit();
         }
 
-        private void Awake()
+        private void StartPlugin()
         {
-            configSyncServerMods = Config.Bind("General", "SyncServerMods", false, "Sync server mods to client");
-
-            clientDirs = Json.Deserialize<string[]>(RequestHandler.GetJson("/modsync/client/dirs"));
-
-            if (clientDirs.Any((dir) => Path.IsPathRooted(dir) || !Path.GetFullPath(dir).StartsWith(Directory.GetCurrentDirectory())))
+            if (persist.downloadDir != string.Empty || persist.filesToDelete.Count != 0)
             {
                 Chainloader.DependencyErrors.Add(
-                    $"Could not load {Info.Metadata.Name} due to invalid client mod directory. Please ensure server configuration is not trying to validate files outside of the SPT directory"
+                    $"Could not load {Info.Metadata.Name} due to failed previous update. Please ensure the PrePatcher is properly installed to 'BepInEx/patchers/Corter-ModSync-Patcher.dll' and try again."
                 );
                 return;
             }
 
-            var localClientFiles = HashLocalFiles(clientDirs);
-
-            Dictionary<string, ModFile> localServerFiles = [];
-            if (configSyncServerMods.Value)
+            try
             {
-                serverDirs = Json.Deserialize<string[]>(RequestHandler.GetJson("/modsync/server/dirs"));
-
-                if (serverDirs.Any((dir) => Path.IsPathRooted(dir) || !Path.GetFullPath(dir).StartsWith(Directory.GetCurrentDirectory())))
-                {
-                    Chainloader.DependencyErrors.Add(
-                        $"Could not load {Info.Metadata.Name} due to invalid server mod directory. Please ensure server configuration is not trying to validate files outside of the SPT directory"
-                    );
-                    return;
-                }
-                localServerFiles = HashLocalFiles(serverDirs);
+                var response = Json.Deserialize<Dictionary<string, string>>(RequestHandler.GetJson("/modsync/version"));
+                Logger.LogInfo($"ModSync found server version: {response["version"]}");
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(e);
+                Chainloader.DependencyErrors.Add(
+                    $"Could not load {Info.Metadata.Name} due to request error. Please ensure the server mod is properly installed and try again."
+                );
+                return;
             }
 
-            Task.Run(async () =>
+            syncPaths = Json.Deserialize<string[]>(RequestHandler.GetJson("/modsync/paths"));
+
+            foreach (var syncPath in syncPaths)
             {
-                try
+                if (Path.IsPathRooted(syncPath))
                 {
-                    var response = Json.Deserialize<Dictionary<string, string>>(await RequestHandler.GetJsonAsync("/modsync/version"));
-                    Logger.LogInfo($"ModSync found server version: {response["version"]}");
-                }
-                catch (Exception e)
-                {
-                    Logger.LogError(e);
                     Chainloader.DependencyErrors.Add(
-                        $"Could not load {Info.Metadata.Name} due to request error. Please ensure the server mod is properly installed and try again."
+                        $"Could not load {Info.Metadata.Name} due to invalid sync path. Paths must be relative to SPT server root! Invalid path '{syncPath}'"
                     );
                     return;
                 }
 
-                try
+                if (!Path.GetFullPath(syncPath).StartsWith(Directory.GetCurrentDirectory()))
                 {
-                    await CheckLocalMods(localClientFiles, localServerFiles);
-                }
-                catch (Exception e)
-                {
-                    Logger.LogError(e);
                     Chainloader.DependencyErrors.Add(
-                        $"Could not load {Info.Metadata.Name} due to error hashing local mods. Please ensure none of the files are open and try again."
+                        $"Could not load {Info.Metadata.Name} due to invalid sync path. Paths must be within SPT server root! Invalid path '{syncPath}'"
                     );
+                    return;
                 }
-            });
+            }
+
+            configSyncPathToggles = syncPaths
+                .Select(
+                    (syncPath) =>
+                        new KeyValuePair<string, ConfigEntry<bool>>(
+                            syncPath,
+                            Config.Bind("Synced Paths", syncPath.Replace("\\", "/"), true, $"Should the mod attempt to sync files from {syncPath}")
+                        )
+                )
+                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+
+            var localModFiles = Sync.HashLocalFiles(Directory.GetCurrentDirectory(), EnabledSyncPaths);
+
+            try
+            {
+                CheckLocalMods(localModFiles);
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(e);
+                Chainloader.DependencyErrors.Add(
+                    $"Could not load {Info.Metadata.Name} due to error hashing local mods. Please ensure none of the files are open and try again."
+                );
+            }
         }
 
-        private AlertWindow alertWindow;
-        private ProgressWindow progressWindow;
-        private RestartWindow restartWindow;
+        private readonly AlertWindow alertWindow = new("Installed mods do not match server", "Would you like to update?");
+        private readonly ProgressWindow progressWindow = new("Downloading Updates...", "Your game will need to be restarted\nafter update completes.");
+        private readonly RestartWindow restartWindow = new("Update Complete.", "Please restart your game to continue.");
 
-        private void Start()
+        private void Awake()
         {
-            alertWindow = new AlertWindow("Installed mods do not match server", "Would you like to update?");
-            progressWindow = new ProgressWindow("Downloading Updates...", "Your game will need to be restarted\nafter update completes.");
-            restartWindow = new RestartWindow("Update Complete.", "Please restart your game to continue.");
+            ConsoleScreen.Processor.RegisterCommand(
+                "modsync",
+                () =>
+                {
+                    StartPlugin();
+                    ConsoleScreen.Log($"Found {UpdateCount} updates available.");
+                }
+            );
+
+            configDeleteRemovedFiles = Config.Bind(
+                "General",
+                "Delete Removed Files",
+                false,
+                "Should the mod delete files that have been removed from the server?"
+            );
+
+            var persistPath = Path.Combine(Directory.GetCurrentDirectory(), ".modsync");
+            try
+            {
+                persist = VFS.Exists(persistPath) ? Json.Deserialize<Persist>(File.ReadAllText(persistPath)) : new();
+            }
+            catch (Exception e)
+            {
+                Logger.LogError("Error parsing .modsync file.");
+                Logger.LogError(e);
+
+                Chainloader.DependencyErrors.Add(
+                    $"Could not load {Info.Metadata.Name} due to error loading .modsync file. If you haven't manually modified the file, please delete it to force a fresh sync and try again."
+                );
+            }
+
+            StartPlugin();
         }
 
         private void OnGUI()
         {
             if (Singleton<CommonUI>.Instantiated)
             {
-                if (restartRequired)
-                    restartWindow.Draw(FinishUpdatingMods);
-                else if (downloadingMods)
-                    progressWindow.Draw(downloadCount, clientModDiff.Count + serverModDiff.Count, CancelUpdatingMods);
-                else if (mismatchedMods)
-                    alertWindow.Draw(() => Task.Run(() => UpdateMods()), SkipUpdatingMods);
+                restartWindow.Draw(FinishUpdatingMods);
+                progressWindow.Draw(downloadCount, UpdateCount, CancelUpdatingMods);
+                alertWindow.Draw(() => Task.Run(() => SyncMods()), SkipUpdatingMods);
             }
         }
 
         public void Update()
         {
-            if (mismatchedMods || downloadingMods || restartRequired)
+            if (alertWindow.Active || progressWindow.Active || restartWindow.Active)
             {
                 if (Singleton<LoginUI>.Instantiated && Singleton<LoginUI>.Instance.gameObject.activeSelf)
                     Singleton<LoginUI>.Instance.gameObject.SetActive(false);
@@ -292,9 +276,9 @@ namespace ModSync
                     Singleton<CommonUI>.Instance.gameObject.SetActive(false);
             }
 
-            if (showMenu)
+            if (pluginFinished)
             {
-                showMenu = false;
+                pluginFinished = false;
                 if (Singleton<LoginUI>.Instantiated && !Singleton<LoginUI>.Instance.gameObject.activeSelf)
                     Singleton<LoginUI>.Instance.gameObject.SetActive(true);
 

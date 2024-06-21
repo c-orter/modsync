@@ -4,19 +4,6 @@ namespace ModSync.UI
 {
     public static class Colors
     {
-        // public static readonly Color Red = new Color32(238, 27, 38, 255);
-        // public static readonly Color Ebony = new Color32(87, 90, 75, 255);
-        // public static readonly Color Olive = new Color32(42, 44, 36, 255);
-        // public static readonly Color Cream = new Color32(243, 247, 240, 255);
-        // public static readonly Color Blue = new Color32(127, 149, 209, 255);
-
-        // Use new colors
-        // 885149 - Red
-        // D3D3D1 - White
-        // 8A94A4 - Blue
-        // 333131 - Dark
-        // 787B83 - Grey
-
         public static readonly Color Red = new Color32(136, 81, 73, 255);
         public static readonly Color RedDarken = new Color32(122, 72, 65, 255);
         public static readonly Color RedLighten = new Color32(135, 90, 84, 255);

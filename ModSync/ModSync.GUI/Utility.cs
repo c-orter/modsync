@@ -1,7 +1,5 @@
 using UnityEngine;
 
-using EFT.UI;
-
 namespace ModSync.UI
 {
     public static class Utility

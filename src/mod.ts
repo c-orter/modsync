@@ -11,15 +11,22 @@ import type { HttpFileUtil } from "@spt-aki/utils/HttpFileUtil";
 import type { VFS } from "@spt-aki/utils/VFS";
 import type { JsonUtil } from "@spt-aki/utils/JsonUtil";
 
+type ModFile = { crc: number; modified: number };
+
 class Mod implements IPreAkiLoadMod {
 	private static container: DependencyContainer;
 
-	private clientModLastUpdated = 0;
-	private clientModHashes?: Record<string, { crc: number; modified: number }>;
-	private serverModHashes?: Record<string, { crc: number; modified: number }>;
+	private static loadFailed = false;
+	private modFileHashes?: Record<string, ModFile>;
+	private static config: { syncPaths: string[]; commonModExclusions: string[] };
+	private static commonModExclusionsRegex: RegExp[];
+	private static syncPathsUpdated = false;
 
 	public preAkiLoad(container: DependencyContainer): void {
 		Mod.container = container;
+		const logger = container.resolve<ILogger>("WinstonLogger");
+		const vfs = container.resolve<VFS>("VFS");
+		const jsonUtil = container.resolve<JsonUtil>("JsonUtil");
 		const httpListenerService = container.resolve<HttpListenerModService>(
 			"HttpListenerModService",
 		);
@@ -28,10 +35,83 @@ class Mod implements IPreAkiLoadMod {
 			this.canHandleOverride,
 			this.handleOverride,
 		);
+
+		Mod.config = jsonUtil.deserializeJsonC(
+			vfs.readFile(path.join(__dirname, "config.jsonc")),
+			"config.jsonc",
+		);
+
+		if (
+			Mod.config.syncPaths === undefined ||
+			Mod.config.commonModExclusions === undefined
+		) {
+			Mod.loadFailed = true;
+			throw new Error(
+				"Corter-ModSync: One or more required config values is missing. Please verify your config is correct and try again.",
+			);
+		}
+
+		Mod.commonModExclusionsRegex = Mod.config.commonModExclusions.map(
+			(exclusion) =>
+				new RegExp(
+					exclusion
+						.split(path.posix.sep)
+						.join(path.sep)
+						.replaceAll("\\", "\\\\"),
+				),
+		);
+
+		if (
+			Mod.config.syncPaths === undefined ||
+			Mod.config.syncPaths.length === 0
+		) {
+			logger.warning(
+				"Corter-ModSync: No sync paths configured. Mod will not be loaded.",
+			);
+			Mod.loadFailed = true;
+		}
+
+		for (const syncPath of Mod.config.syncPaths) {
+			fs.watch(syncPath, { recursive: true }, (e, filename) => {
+				if (
+					filename &&
+					Mod.commonModExclusionsRegex.some((exclusion) =>
+						exclusion.test(path.join(syncPath, filename)),
+					)
+				)
+					return;
+
+				logger.warning(
+					`Corter-ModSync: '${path.join(
+						syncPath,
+						filename ?? "",
+					)}' was changed while the server is running. If server mods were updated, those changes will not take effect until after the server is restarted.`,
+				);
+				Mod.syncPathsUpdated = true;
+			});
+		}
+
+		for (const syncPath in Mod.config.syncPaths) {
+			if (path.isAbsolute(syncPath)) {
+				throw new Error(
+					`Corter-ModSync: SyncPaths must be relative to SPT server root. Invalid path '${syncPath}'`,
+				);
+			}
+
+			if (
+				path
+					.relative(process.cwd(), path.resolve(process.cwd(), syncPath))
+					.startsWith("..")
+			) {
+				throw new Error(
+					`Corter-ModSync: SyncPaths must within SPT server root. Invalid path '${syncPath}'`,
+				);
+			}
+		}
 	}
 
 	public canHandleOverride(_sessionId: string, req: IncomingMessage): boolean {
-		return req.url?.startsWith("/modsync/") ?? false;
+		return !Mod.loadFailed && (req.url?.startsWith("/modsync/") ?? false);
 	}
 
 	public async handleOverride(
@@ -43,57 +123,10 @@ class Mod implements IPreAkiLoadMod {
 		const vfs = Mod.container.resolve<VFS>("VFS");
 		const hashUtil = Mod.container.resolve<HashUtil>("HashUtil");
 		const httpFileUtil = Mod.container.resolve<HttpFileUtil>("HttpFileUtil");
-		const jsonUtil = Mod.container.resolve<JsonUtil>("JsonUtil");
-
-		const { clientDirs, serverDirs, commonModExclusions } =
-			jsonUtil.deserializeJsonC<{
-				clientDirs: string[];
-				serverDirs: string[];
-				commonModExclusions: string[];
-			}>(
-				await vfs.readFileAsync(path.join(__dirname, "config.jsonc")),
-				"config.jsonc",
-			);
-
-		const commonModExclusionsRegex = commonModExclusions.map(
-			(exclusion) =>
-				new RegExp(
-					exclusion
-						.split(path.posix.sep)
-						.join(path.sep)
-						.replaceAll("\\", "\\\\"),
-				),
-		);
-
-		if (
-			clientDirs.some(
-				(dir) =>
-					path.isAbsolute(dir) ||
-					path
-						.relative(process.cwd(), path.resolve(process.cwd(), dir))
-						.startsWith(".."),
-			)
-		)
-			logger.error(
-				"Invalid clientDirs in config.json. Ensure directories are relative to the SPT server directory (ie. BepInEx/plugins)",
-			);
-
-		if (
-			serverDirs.some(
-				(dir) =>
-					path.isAbsolute(dir) ||
-					path
-						.relative(process.cwd(), path.resolve(process.cwd(), dir))
-						.startsWith(".."),
-			)
-		)
-			logger.error(
-				"Invalid serverDirs in config.json. Ensure directories are relative to the SPT server directory (ie. user/mods)",
-			);
 
 		const getFileHashes = async (
-			dirs: string[],
-		): Promise<Record<string, { crc: number; modified: number }>> => {
+			hashPaths: string[],
+		): Promise<Record<string, ModFile>> => {
 			const getFilesInDir = (dir: string): string[] => {
 				try {
 					return [
@@ -106,7 +139,7 @@ class Mod implements IPreAkiLoadMod {
 									!file.endsWith(".nosync.txt") &&
 									!vfs.exists(`${file}.nosync`) &&
 									!vfs.exists(`${file}.nosync.txt`) &&
-									!commonModExclusionsRegex.some((exclusion) =>
+									!Mod.commonModExclusionsRegex.some((exclusion) =>
 										exclusion.test(file),
 									),
 							),
@@ -117,7 +150,7 @@ class Mod implements IPreAkiLoadMod {
 								(subDir) =>
 									!vfs.exists(path.join(subDir, ".nosync")) &&
 									!vfs.exists(path.join(subDir, ".nosync.txt")) &&
-									!commonModExclusionsRegex.some((exclusion) =>
+									!Mod.commonModExclusionsRegex.some((exclusion) =>
 										exclusion.test(subDir),
 									),
 							)
@@ -129,44 +162,48 @@ class Mod implements IPreAkiLoadMod {
 			};
 
 			const buildModFile = (file: string) => {
-				const modified = fs.statSync(file).mtime;
-
 				// biome-ignore lint/style/noNonNullAssertion: <explanation>
-				const dir = dirs.find(
-					(dir) => !path.relative(dir, file).startsWith(".."),
+				const parent = hashPaths.find(
+					(syncPath) => !path.relative(syncPath, file).startsWith(".."),
 				)!;
 
 				return [
 					path
-						.join(dir, path.relative(dir, file))
+						.join(parent, path.relative(parent, file))
 						.split(path.sep)
 						.join(path.win32.sep),
 					{
 						crc: hashUtil.generateCRC32ForFile(file),
-						modified: new Date(
-							modified.getTime() + modified.getTimezoneOffset() * 60000,
-						).getTime(),
+						modified: fs.statSync(file).mtimeMs,
 					},
 				];
 			};
 
-			return Object.assign(
-				{},
+			const dirs = hashPaths.filter((syncPath) =>
+				fs.lstatSync(syncPath).isDirectory(),
+			);
+
+			const files = hashPaths.filter((syncPath) =>
+				fs.lstatSync(syncPath).isFile(),
+			);
+
+			return Object.fromEntries([
+				...files
+					.map((file) => path.join(process.cwd(), file))
+					.map(buildModFile),
 				...dirs
 					.map((dir) => path.join(process.cwd(), dir))
-					.map((dir) =>
-						Object.fromEntries(getFilesInDir(dir).map(buildModFile)),
-					),
-			);
+					.flatMap((dir) => getFilesInDir(dir).map(buildModFile)),
+			]);
 		};
 
-		const sanitizeFilePath = (file: string, allowedSubDirs: string[]) => {
+		const sanitizeFilePath = (file: string) => {
 			const sanitizedPath = path.join(
 				path.normalize(file).replace(/^(\.\.(\/|\\|$))+/, ""),
 			);
 
 			return (
-				!allowedSubDirs.every((subDir) =>
+				!Mod.config.syncPaths?.every((subDir) =>
 					path
 						.relative(path.join(process.cwd(), subDir), sanitizedPath)
 						.startsWith(".."),
@@ -183,58 +220,30 @@ class Mod implements IPreAkiLoadMod {
 				resp.setHeader("Content-Type", "application/json");
 				resp.writeHead(200, "OK");
 				resp.end(JSON.stringify({ version: packageJson.version }));
-			} else if (req.url === "/modsync/client/dirs") {
+			} else if (req.url === "/modsync/paths") {
 				resp.setHeader("Content-Type", "application/json");
 				resp.writeHead(200, "OK");
 				resp.end(
 					JSON.stringify(
-						clientDirs.map((dir) =>
+						Mod.config.syncPaths.map((dir) =>
 							dir.split(path.posix.sep).join(path.win32.sep),
 						),
 					),
 				);
-			} else if (req.url === "/modsync/server/dirs") {
-				resp.setHeader("Content-Type", "application/json");
-				resp.writeHead(200, "OK");
-				resp.end(
-					JSON.stringify(
-						serverDirs.map((dir) =>
-							dir.split(path.posix.sep).join(path.win32.sep),
-						),
-					),
-				);
-			} else if (req.url === "/modsync/client/hashes") {
-				const clientModUpdated = Math.max(
-					...clientDirs.map((dir) => fs.statSync(dir).mtimeMs),
-				);
-
-				if (
-					this.clientModHashes === undefined ||
-					clientModUpdated > this.clientModLastUpdated
-				) {
-					this.clientModLastUpdated = clientModUpdated;
-
-					this.clientModHashes = await getFileHashes(clientDirs);
-				}
+			} else if (req.url === "/modsync/hashes") {
+				if (this.modFileHashes === undefined || Mod.syncPathsUpdated)
+					this.modFileHashes = await getFileHashes(Mod.config.syncPaths);
 
 				resp.setHeader("Content-Type", "application/json");
 				resp.writeHead(200, "OK");
-				resp.end(JSON.stringify(this.clientModHashes));
-			} else if (req.url === "/modsync/server/hashes") {
-				if (this.serverModHashes === undefined) {
-					this.serverModHashes = await getFileHashes(serverDirs);
-				}
-
-				resp.setHeader("Content-Type", "application/json");
-				resp.writeHead(200, "OK");
-				resp.end(JSON.stringify(this.serverModHashes));
-			} else if (req.url?.startsWith("/modsync/client/fetch/")) {
+				resp.end(JSON.stringify(this.modFileHashes));
+			} else if (req.url?.startsWith("/modsync/fetch/")) {
 				const filePath = decodeURIComponent(
 					// biome-ignore lint/style/noNonNullAssertion: <explanation>
-					req.url.split("/modsync/client/fetch/").at(-1)!,
+					req.url.split("/modsync/fetch/").at(-1)!,
 				);
 
-				const sanitizedPath = sanitizeFilePath(filePath, clientDirs);
+				const sanitizedPath = sanitizeFilePath(filePath);
 				if (!sanitizedPath) {
 					logger.warning(`Attempt to access invalid path ${filePath}`);
 					resp.writeHead(400, "Bad request");
@@ -249,26 +258,8 @@ class Mod implements IPreAkiLoadMod {
 					return;
 				}
 
-				httpFileUtil.sendFile(resp, sanitizedPath);
-			} else if (req.url?.startsWith("/modsync/server/fetch/")) {
-				const filePath = decodeURIComponent(
-					// biome-ignore lint/style/noNonNullAssertion: <explanation>
-					req.url.split("/modsync/server/fetch/").at(-1)!,
-				);
-				const sanitizedPath = sanitizeFilePath(filePath, serverDirs);
-				if (!sanitizedPath) {
-					logger.warning(`Attempt to access invalid path ${filePath}`);
-					resp.writeHead(400, "Bad request");
-					resp.end("Invalid path");
-					return;
-				}
-
-				if (!vfs.exists(sanitizedPath)) {
-					logger.warning(`Attempt to access non-existent path ${filePath}`);
-					resp.writeHead(404, "Not found");
-					resp.end(`File ${filePath} not found`);
-					return;
-				}
+				const fileStats = await vfs.statPromisify(sanitizedPath);
+				resp.setHeader("Content-Length", fileStats.size);
 
 				httpFileUtil.sendFile(resp, sanitizedPath);
 			} else {

@@ -1,7 +1,4 @@
 using System;
-using Comfort.Common;
-using EFT.UI;
-using HarmonyLib;
 using UnityEngine;
 
 namespace ModSync.UI
@@ -9,9 +6,15 @@ namespace ModSync.UI
     public class AlertWindow(string title, string message)
     {
         private readonly AlertBox alertBox = new(title, message);
+        public bool Active { get; private set; }
+        public void Show() => Active = true;
+
+        public void Hide() => Active = false;
 
         public void Draw(Action onAccept, Action onDecline)
         {
+            if (!Active) return;
+
             float screenWidth = Screen.width;
             float screenHeight = Screen.height;
 
@@ -53,7 +56,7 @@ namespace ModSync.UI
                     borderRect.width - 2 * borderThickness,
                     borderRect.height - 2 * borderThickness
                 );
-            
+
             GUI.DrawTexture(alertRect, Utility.GetTexture(Colors.Dark.SetAlpha(0.5f)), ScaleMode.StretchToFill, true, 0);
 
             Rect infoRect = new(alertRect.x, alertRect.y, alertRect.width, alertRect.height - 48f);

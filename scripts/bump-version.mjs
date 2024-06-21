@@ -48,10 +48,10 @@ await Bun.write(
 );
 
 const patcherAssemblyInfoString = await Bun.file(
-	"ModSync.PrePatcher/Properties/AssemblyInfo.cs",
+	"ModSync/ModSync.PrePatcher/Properties/AssemblyInfo.cs",
 ).text();
 await Bun.write(
-	"ModSync.PrePatcher/Properties/AssemblyInfo.cs",
+	"ModSync/ModSync.PrePatcher/Properties/AssemblyInfo.cs",
 	patcherAssemblyInfoString
 		.replace(
 			`AssemblyVersion("${currentVersion}")`,
@@ -68,7 +68,7 @@ const PluginCsString = await Bun.file("ModSync/Plugin.cs").text();
 await Bun.write(
 	"ModSync/Plugin.cs",
 	PluginCsString.replace(
-		`BepInPlugin("aaa.corter.modsync", "Corter ModSync", "${currentVersion}")`,
-		`BepInPlugin("aaa.corter.modsync", "Corter ModSync", "${newVersion}")`,
+		`BepInPlugin("corter.modsync", "Corter ModSync", "${currentVersion}")`,
+		`BepInPlugin("corter.modsync", "Corter ModSync", "${newVersion}")`,
 	),
 );

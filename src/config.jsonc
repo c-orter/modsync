@@ -1,10 +1,17 @@
 {
-	"clientDirs": ["BepInEx/plugins", "BepInEx/patchers", "BepInEx/config"],
-	"serverDirs": ["user/mods"],
+	"syncPaths": [
+		"BepInEx/plugins",
+		"BepInEx/patchers",
+		"BepInEx/config",
+		"user/mods"
+	],
 	"commonModExclusions": [
 		// Corter-ModSync
 		"BepInEx/plugins/Corter-ModSync.dll",
 		"BepInEx/patchers/Corter-ModSync-Patcher.dll",
+		// SPT Installer
+		"BepInEx/plugins/spt",
+		"BepInEx/patchers/aki_PrePatch.dll",
 		// Questing Bots
 		"BepInEx/plugins/DanW-SPTQuestingBots/log",
 		// Realism

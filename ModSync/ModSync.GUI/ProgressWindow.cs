@@ -8,9 +8,17 @@ namespace ModSync.UI
         private readonly InfoBox infoBox = new(title, message);
         private readonly ProgressBar progressBar = new();
         private readonly CancelButton cancelButton = new();
+        public bool Active { get; private set; }
+
+        public void Show() => Active = true;
+
+        public void Hide() => Active = false;
 
         public void Draw(int progressValue, int progressMax, Action cancelAction)
         {
+            if (!Active)
+                return;
+
             float screenWidth = Screen.width;
             float screenHeight = Screen.height;
 

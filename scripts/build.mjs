@@ -13,7 +13,7 @@ await $`cp src/* dist/user/mods/corter-modsync/src`;
 
 await $`dotnet build --configuration Release`.cwd("ModSync/");
 await $`cp ModSync/bin/Release/Corter-ModSync.dll dist/BepInEx/plugins/`;
-await $`cp ModSync.PrePatcher/bin/Release/Corter-ModSync-Patcher.dll dist/BepInEx/patchers/`;
+await $`cp ModSync/ModSync.PrePatcher/bin/Release/Corter-ModSync-Patcher.dll dist/BepInEx/patchers/`;
 
 await $`7z a -tzip corter-modsync-server-${packageJson.version}.zip user/`
 	.cwd("dist/")
