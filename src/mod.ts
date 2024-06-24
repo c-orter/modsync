@@ -3,10 +3,11 @@ import type { DependencyContainer } from "tsyringe";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import path from "node:path";
 import fs from "node:fs";
+import { readFile, stat } from "node:fs/promises";
+import crc32 from "buffer-crc32";
 import type { IPreAkiLoadMod } from "@spt-aki/models/external/IPreAkiLoadMod";
 import type { ILogger } from "@spt-aki/models/spt/utils/ILogger";
 import type { HttpListenerModService } from "@spt-aki/services/mod/httpListener/HttpListenerModService";
-import type { HashUtil } from "@spt-aki/utils/HashUtil";
 import type { HttpFileUtil } from "@spt-aki/utils/HttpFileUtil";
 import type { VFS } from "@spt-aki/utils/VFS";
 import type { JsonUtil } from "@spt-aki/utils/JsonUtil";
@@ -72,23 +73,29 @@ class Mod implements IPreAkiLoadMod {
 		}
 
 		for (const syncPath of Mod.config.syncPaths) {
-			fs.watch(syncPath, { recursive: true }, (e, filename) => {
-				if (
-					filename &&
-					Mod.commonModExclusionsRegex.some((exclusion) =>
-						exclusion.test(path.join(syncPath, filename)),
+			fs.watch(
+				syncPath,
+				{ recursive: true, persistent: false },
+				(e, filename) => {
+					if (
+						filename &&
+						Mod.commonModExclusionsRegex.some((exclusion) =>
+							exclusion.test(path.join(syncPath, filename)),
+						)
 					)
-				)
-					return;
+						return;
 
-				logger.warning(
-					`Corter-ModSync: '${path.join(
-						syncPath,
-						filename ?? "",
-					)}' was changed while the server is running. If server mods were updated, those changes will not take effect until after the server is restarted.`,
-				);
-				Mod.syncPathsUpdated = true;
-			});
+					if (!Mod.syncPathsUpdated) {
+						logger.warning(
+							`Corter-ModSync: '${path.join(
+								syncPath,
+								filename ?? "",
+							)}' was changed while the server is running. If server mods were updated, those changes will not take effect until after the server is restarted.`,
+						);
+						Mod.syncPathsUpdated = true;
+					}
+				},
+			);
 		}
 
 		for (const syncPath in Mod.config.syncPaths) {
@@ -121,7 +128,6 @@ class Mod implements IPreAkiLoadMod {
 	): Promise<void> {
 		const logger = Mod.container.resolve<ILogger>("WinstonLogger");
 		const vfs = Mod.container.resolve<VFS>("VFS");
-		const hashUtil = Mod.container.resolve<HashUtil>("HashUtil");
 		const httpFileUtil = Mod.container.resolve<HttpFileUtil>("HttpFileUtil");
 
 		const getFileHashes = async (
@@ -161,7 +167,7 @@ class Mod implements IPreAkiLoadMod {
 				}
 			};
 
-			const buildModFile = (file: string) => {
+			const buildModFile = async (file: string) => {
 				// biome-ignore lint/style/noNonNullAssertion: <explanation>
 				const parent = hashPaths.find(
 					(syncPath) => !path.relative(syncPath, file).startsWith(".."),
@@ -173,8 +179,8 @@ class Mod implements IPreAkiLoadMod {
 						.split(path.sep)
 						.join(path.win32.sep),
 					{
-						crc: hashUtil.generateCRC32ForFile(file),
-						modified: fs.statSync(file).mtimeMs,
+						crc: crc32.unsigned(await readFile(file)),
+						modified: await stat(file).then(({ mtimeMs }) => mtimeMs),
 					},
 				];
 			};
@@ -188,12 +194,14 @@ class Mod implements IPreAkiLoadMod {
 			);
 
 			return Object.fromEntries([
-				...files
-					.map((file) => path.join(process.cwd(), file))
-					.map(buildModFile),
-				...dirs
-					.map((dir) => path.join(process.cwd(), dir))
-					.flatMap((dir) => getFilesInDir(dir).map(buildModFile)),
+				...(await Promise.all(
+					files.map((file) => path.join(process.cwd(), file)).map(buildModFile),
+				)),
+				...(await Promise.all(
+					dirs
+						.map((dir) => path.join(process.cwd(), dir))
+						.flatMap((dir) => getFilesInDir(dir).map(buildModFile)),
+				)),
 			]);
 		};
 
@@ -219,7 +227,7 @@ class Mod implements IPreAkiLoadMod {
 
 				resp.setHeader("Content-Type", "application/json");
 				resp.writeHead(200, "OK");
-				resp.end(JSON.stringify({ version: packageJson.version }));
+				resp.end(JSON.stringify(packageJson.version));
 			} else if (req.url === "/modsync/paths") {
 				resp.setHeader("Content-Type", "application/json");
 				resp.writeHead(200, "OK");
@@ -231,8 +239,10 @@ class Mod implements IPreAkiLoadMod {
 					),
 				);
 			} else if (req.url === "/modsync/hashes") {
-				if (this.modFileHashes === undefined || Mod.syncPathsUpdated)
+				if (this.modFileHashes === undefined || Mod.syncPathsUpdated) {
+					Mod.syncPathsUpdated = false;
 					this.modFileHashes = await getFileHashes(Mod.config.syncPaths);
+				}
 
 				resp.setHeader("Content-Type", "application/json");
 				resp.writeHead(200, "OK");
