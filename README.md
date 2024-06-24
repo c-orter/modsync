@@ -35,6 +35,7 @@ This project allows clients to easily synchronize mods between server and client
 
 1. Download the latest version of the client mod from the [GitHub Releases](https://github.com/c-orter/modsync/releases) page
 2. Extract into your SPT/Fika folder like any other client mod
+   > Ensure you have both `BepInEx/plugins/Corter-ModSync.dll` **AND** `BepInEx/patchers/Corter-ModSync-PrePatcher.dll`.
 3. Start the client and enjoy!
 
 
@@ -46,8 +47,7 @@ This project allows clients to easily synchronize mods between server and client
 
 | Configuration | Description | Default |
 | --- | --- | --- |
-| `clientDirs` | List of client directories to sync | `["BepInEx/plugins", "BepInEx/config"]` |
-| `serverDirs` | List of server directories to sync | `["user/mods"]` |
+| `syncPath` | List of paths to sync (can be folders or files) | `["BepInEx/plugins", "BepInEx/config", "BepInEx/patchers", "user/mods"]` |
 | `commonModExclusions` | List of files from common mods that should be excluded from syncing | See [config.json](src/config.jsonc) |
 
 ### Client
@@ -56,7 +56,8 @@ This project allows clients to easily synchronize mods between server and client
 
 | Configuration | Description | Default |
 | --- | --- | --- |
-| `SyncServerMods` | Sync server mods in addition to client mods | `false` |
+| `Delete Removed Files` | Should files that have been removed from the host be deleted from the client | `false` |
+| `[Synced Paths]` | A config entry will be added for each syncPath, allowing the client to customize the syncing behavior | `true` |
 
 ## Ignoring Files & Folders
 
