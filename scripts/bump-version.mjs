@@ -63,6 +63,22 @@ await Bun.write(
 		),
 );
 
+const testsAssemblyInfoString = await Bun.file(
+	"ModSync/ModSync.Tests/Properties/AssemblyInfo.cs",
+).text();
+await Bun.write(
+	"ModSync/ModSync.Tests/Properties/AssemblyInfo.cs",
+	testsAssemblyInfoString
+		.replace(
+			`AssemblyVersion("${currentVersion}")`,
+			`AssemblyVersion("${newVersion}")`,
+		)
+		.replace(
+			`AssemblyFileVersion("${currentVersion}")`,
+			`AssemblyFileVersion("${newVersion}")`,
+		),
+);
+
 const PluginCsString = await Bun.file("ModSync/Plugin.cs").text();
 
 await Bun.write(
