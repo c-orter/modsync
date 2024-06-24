@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Aki.Common.Utils;
 using Mono.Cecil;
 
@@ -41,8 +42,13 @@ namespace ModSync.PrePatcher
             }
 
             foreach (var file in persist.filesToDelete)
+            {
                 if (File.Exists(file))
                     File.Delete(file);
+
+                if (Directory.GetParent(file).GetFiles("*.*", SearchOption.AllDirectories).Count() == 0)
+                    Directory.GetParent(file).Delete();
+            }
 
             Cleanup(persistPath, persist);
         }
