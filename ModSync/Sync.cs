@@ -9,6 +9,8 @@ namespace ModSync
 {
     public static class Sync
     {
+        private static readonly Server server = new();
+
         public static List<string> GetAddedFiles(Dictionary<string, ModFile> localModFiles, Dictionary<string, ModFile> remoteModFiles)
         {
             return remoteModFiles.Keys.Except(localModFiles.Keys).ToList();
@@ -70,6 +72,20 @@ namespace ModSync
                     Utility.NoSyncInTree(basePath, relativePath)
                 )
             );
+        }
+
+        public static void CompareModFiles(
+            Dictionary<string, ModFile> localModFiles,
+            Dictionary<string, ModFile> remoteModFiles,
+            Dictionary<string, ModFile> previousSync,
+            out List<string> addedFiles,
+            out List<string> updatedFiles,
+            out List<string> removedFiles
+        )
+        {
+            addedFiles = GetAddedFiles(localModFiles, remoteModFiles);
+            updatedFiles = GetUpdatedFiles(localModFiles, remoteModFiles, previousSync);
+            removedFiles = GetRemovedFiles(localModFiles, remoteModFiles, previousSync);
         }
     }
 }

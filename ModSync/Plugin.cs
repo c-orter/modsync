@@ -2,10 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Aki.Common.Http;
 using Aki.Common.Utils;
 using BepInEx;
 using BepInEx.Bootstrap;
@@ -38,26 +36,24 @@ namespace ModSync
         private int downloadCount = 0;
         private string downloadDir = string.Empty;
 
+        private readonly Server server = new();
+
         public static new ManualLogSource Logger = BepInEx.Logging.Logger.CreateLogSource("ModSync");
 
         private List<string> EnabledSyncPaths => syncPaths.Where((syncPath) => configSyncPathToggles[syncPath].Value).ToList();
 
-        private void CheckLocalMods(Dictionary<string, ModFile> localModFiles)
+        private void AnalyzeModFiles(Dictionary<string, ModFile> localModFiles)
         {
-            var syncResponse = RequestHandler.GetJson("/modsync/hashes");
-            remoteModFiles = Json.Deserialize<Dictionary<string, ModFile>>(syncResponse);
-
-            addedFiles = Sync.GetAddedFiles(localModFiles, remoteModFiles);
-            updatedFiles = Sync.GetUpdatedFiles(localModFiles, remoteModFiles, persist.previousSync);
-
-            if (configDeleteRemovedFiles.Value)
-                removedFiles = Sync.GetRemovedFiles(localModFiles, remoteModFiles, persist.previousSync);
+            remoteModFiles = server.GetRemoteModFileHashes();
+            Sync.CompareModFiles(localModFiles, remoteModFiles, persist.previousSync, out addedFiles, out updatedFiles, out removedFiles);
 
             Logger.LogInfo($"Found {UpdateCount} files to download.");
             Logger.LogInfo($"- {addedFiles.Count} added");
             Logger.LogInfo($"- {updatedFiles.Count} updated");
             if (configDeleteRemovedFiles.Value)
                 Logger.LogInfo($"- {removedFiles.Count} removed");
+            else
+                removedFiles.Clear();
 
             if (UpdateCount > 0)
                 alertWindow.Show();
@@ -69,45 +65,22 @@ namespace ModSync
             alertWindow.Hide();
         }
 
-        private async Task DownloadFile(string file, SemaphoreSlim limiter)
-        {
-            var downloadPath = Path.Combine(downloadDir, file);
-            VFS.CreateDirectory(downloadPath.GetDirectory());
-
-            try
-            {
-                await limiter.WaitAsync();
-                using var client = new HttpClient();
-                using var fileStream = new FileStream(downloadPath, FileMode.CreateNew);
-                using var responseStream = await client.GetStreamAsync($@"{RequestHandler.Host}/modsync/fetch/{file}");
-
-                await responseStream.CopyToAsync(fileStream);
-            }
-            catch (Exception e)
-            {
-                Logger.LogError(e);
-            }
-        }
-
         private async Task SyncMods()
         {
             alertWindow.Hide();
             downloadDir = Utility.GetTemporaryDirectory();
-
-            VFS.CreateDirectory(downloadDir);
 
             downloadCount = 0;
             progressWindow.Show();
 
             var limiter = new SemaphoreSlim(32, maxCount: 32);
 
-            var taskList = addedFiles.Union(updatedFiles).Select((file) => DownloadFile(file, limiter)).ToList();
+            var taskList = addedFiles.Union(updatedFiles).Select((file) => server.DownloadFile(file, downloadDir, limiter)).ToList();
 
             while (taskList.Count > 0)
             {
                 var task = await Task.WhenAny(taskList);
                 taskList.Remove(task);
-                limiter.Release();
                 downloadCount++;
             }
 
@@ -154,8 +127,8 @@ namespace ModSync
 
             try
             {
-                var response = Json.Deserialize<Dictionary<string, string>>(RequestHandler.GetJson("/modsync/version"));
-                Logger.LogInfo($"ModSync found server version: {response["version"]}");
+                var version = server.GetModSyncVersion();
+                Logger.LogInfo($"ModSync found server version: {version}");
             }
             catch (Exception e)
             {
@@ -166,7 +139,7 @@ namespace ModSync
                 return;
             }
 
-            syncPaths = Json.Deserialize<string[]>(RequestHandler.GetJson("/modsync/paths"));
+            syncPaths = server.GetModSyncPaths();
 
             foreach (var syncPath in syncPaths)
             {
@@ -201,7 +174,7 @@ namespace ModSync
 
             try
             {
-                CheckLocalMods(localModFiles);
+                AnalyzeModFiles(localModFiles);
             }
             catch (Exception e)
             {
