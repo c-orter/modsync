@@ -123,6 +123,7 @@
   <ItemGroup>
     <Compile Include="Plugin.cs" />
     <Compile Include="ModSync.GUI\*.cs" />
+    <Compile Include="Server.cs" />
     <Compile Include="Sync.cs" />
   </ItemGroup>
   <ItemGroup>

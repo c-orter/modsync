@@ -6,9 +6,6 @@
 		"user/mods"
 	],
 	"commonModExclusions": [
-		// Corter-ModSync
-		"BepInEx/plugins/Corter-ModSync.dll",
-		"BepInEx/patchers/Corter-ModSync-Patcher.dll",
 		// SPT Installer
 		"BepInEx/plugins/spt",
 		"BepInEx/patchers/aki_PrePatch.dll",

@@ -191,7 +191,9 @@ namespace ModSync
         [TestMethod]
         public void TestHashLocalFiles()
         {
-            var expected = fileContents.Where((kvp) => !kvp.Key.EndsWith(".nosync") && !kvp.Key.EndsWith(".nosync.txt")).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+            var expected = fileContents
+                .Where((kvp) => !kvp.Key.EndsWith(".nosync") && !kvp.Key.EndsWith(".nosync.txt"))
+                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
             var result = Sync.HashLocalFiles(testDirectory, [testDirectory]);
 
             Assert.IsNotNull(result);

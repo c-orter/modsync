@@ -31,5 +31,5 @@
   },
   "author": "Corter",
   "license": "MIT",
-  "dependencies": {}
+  "dependencies": { "buffer-crc32": "^1.0.0" }
 }

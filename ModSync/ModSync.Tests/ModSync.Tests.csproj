@@ -5,11 +5,11 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{3844C43E-C608-4662-9880-277AB83E3C0D}</ProjectGuid>
+    <ProjectGuid>{ABCAD858-D5D2-4331-800F-4AEE9B339B52}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>ModSync.Test</RootNamespace>
-    <AssemblyName>ModSync.Test</AssemblyName>
+    <RootNamespace>ModSync.Tests</RootNamespace>
+    <AssemblyName>ModSync.Tests</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{3AC096D0-A1C2-E12C-1390-A8335801FDAB};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
@@ -42,15 +42,11 @@
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="aki-custom, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="aki-custom">
       <HintPath>..\..\EscapeFromTarkov_Data\Managed\aki-custom.dll</HintPath>
     </Reference>
     <Reference Include="Aki.Common">
       <HintPath>..\..\EscapeFromTarkov_Data\Managed\Aki.Common.dll</HintPath>
-    </Reference>
-    <Reference Include="BepInEx">
-      <HintPath>..\..\BepInEx\core\BepInEx.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.TestPlatform.TestFramework, Version=14.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\MSTest.TestFramework.2.2.10\lib\net45\Microsoft.VisualStudio.TestPlatform.TestFramework.dll</HintPath>
@@ -58,21 +54,48 @@
     <Reference Include="Microsoft.VisualStudio.TestPlatform.TestFramework.Extensions, Version=14.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\MSTest.TestFramework.2.2.10\lib\net45\Microsoft.VisualStudio.TestPlatform.TestFramework.Extensions.dll</HintPath>
     </Reference>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="IntegrationTests.cs" />
     <Compile Include="SyncTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="UtilityTests.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="IntegrationTests\DoNotUpdateWhenLocalChanges\local\.modsync" />
+    <None Include="IntegrationTests\RemoveSingleFile\local\.modsync" />
+    <None Include="IntegrationTests\UpdateSingleFile\local\.modsync" />
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="IntegrationTests\DoNotUpdateWhenLocalChanges\local\SAIN.dll" />
+    <Content Include="IntegrationTests\DoNotUpdateWhenLocalChanges\remote\SAIN.dll" />
+    <Content Include="IntegrationTests\InitialEmptyManyFiles\remote\plugins\Corter-ModSync.dll" />
+    <Content Include="IntegrationTests\InitialEmptyManyFiles\remote\plugins\SAIN.dll" />
+    <Content Include="IntegrationTests\InitialEmptySingleFile\remote\SAIN.dll" />
+    <Content Include="IntegrationTests\RemoveSingleFile\local\SAIN.dll" />
+    <Content Include="IntegrationTests\UpdateSingleFile\local\SAIN.dll" />
+    <Content Include="IntegrationTests\UpdateSingleFile\remote\SAIN.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="IntegrationTests\InitialEmptyManyFiles\local\" />
+    <Folder Include="IntegrationTests\InitialEmptySingleFile\local\" />
+    <Folder Include="IntegrationTests\RemoveSingleFile\remote\" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ModSync.csproj">
       <Project>{6337fafc-25ba-4062-b61c-12a614297ae5}</Project>
       <Name>ModSync</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\ModSync.PrePatcher\ModSync.PrePatcher.csproj">
+      <Project>{67d0e573-0411-4b38-a836-065c05ee4559}</Project>
+      <Name>ModSync.PrePatcher</Name>
+      <Aliases>patcher</Aliases>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets" Condition="Exists('$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets')" />
