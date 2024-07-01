@@ -129,6 +129,8 @@ namespace ModSync
             {
                 var version = server.GetModSyncVersion();
                 Logger.LogInfo($"ModSync found server version: {version}");
+                if (version != Info.Metadata.Version.ToString())
+                    Logger.LogWarning("ModSync server version does not match plugin version. Found server version: " + version + ". Plugin may not work as expected!");
             }
             catch (Exception e)
             {

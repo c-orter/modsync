@@ -55,10 +55,10 @@ class Mod implements IPreAkiLoadMod {
 		Mod.commonModExclusionsRegex = Mod.config.commonModExclusions.map(
 			(exclusion) =>
 				new RegExp(
-					exclusion
+					`^${exclusion
 						.split(path.posix.sep)
 						.join(path.sep)
-						.replaceAll("\\", "\\\\"),
+						.replaceAll("\\", "\\\\")}$`,
 				),
 		);
 
