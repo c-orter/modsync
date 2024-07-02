@@ -55,7 +55,7 @@ class Mod implements IPreAkiLoadMod {
 		Mod.commonModExclusionsRegex = Mod.config.commonModExclusions.map(
 			(exclusion) =>
 				new RegExp(
-					`^${exclusion
+					`${exclusion
 						.split(path.posix.sep)
 						.join(path.sep)
 						.replaceAll("\\", "\\\\")}$`,
@@ -73,6 +73,13 @@ class Mod implements IPreAkiLoadMod {
 		}
 
 		for (const syncPath of Mod.config.syncPaths) {
+			if (!vfs.exists(syncPath)) {
+				logger.warning(
+					`Corter-ModSync: SyncPath '${syncPath}' does not exist. Path will not be synced.`,
+				);
+				continue;
+			}
+
 			fs.watch(
 				syncPath,
 				{ recursive: true, persistent: false },
@@ -241,7 +248,9 @@ class Mod implements IPreAkiLoadMod {
 			} else if (req.url === "/modsync/hashes") {
 				if (this.modFileHashes === undefined || Mod.syncPathsUpdated) {
 					Mod.syncPathsUpdated = false;
-					this.modFileHashes = await getFileHashes(Mod.config.syncPaths);
+					this.modFileHashes = await getFileHashes(
+						Mod.config.syncPaths.filter(vfs.exists),
+					);
 				}
 
 				resp.setHeader("Content-Type", "application/json");
@@ -279,7 +288,7 @@ class Mod implements IPreAkiLoadMod {
 			}
 		} catch (e) {
 			if (e instanceof Error) {
-				logger.error(e.toString());
+				logger.error(`${e.message}\n${e.stack}`);
 				resp.writeHead(500, "Internal server error");
 				resp.end(e.toString());
 			}
