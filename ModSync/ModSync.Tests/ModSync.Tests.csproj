@@ -68,6 +68,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="IntegrationTests\DoNotUpdateWhenLocalChanges\local\.modsync" />
+    <None Include="IntegrationTests\MismatchedCases\local\.modsync" />
     <None Include="IntegrationTests\RemoveSingleFile\local\.modsync" />
     <None Include="IntegrationTests\UpdateSingleFile\local\.modsync" />
     <None Include="packages.config" />
@@ -78,6 +79,10 @@
     <Content Include="IntegrationTests\InitialEmptyManyFiles\remote\plugins\Corter-ModSync.dll" />
     <Content Include="IntegrationTests\InitialEmptyManyFiles\remote\plugins\SAIN.dll" />
     <Content Include="IntegrationTests\InitialEmptySingleFile\remote\SAIN.dll" />
+    <Content Include="IntegrationTests\MismatchedCases\local\SAIN.dll" />
+    <Content Include="IntegrationTests\MismatchedCases\local\test.dll" />
+    <Content Include="IntegrationTests\MismatchedCases\remote\sain.dll" />
+    <Content Include="IntegrationTests\MismatchedCases\remote\TeSt.dll" />
     <Content Include="IntegrationTests\RemoveSingleFile\local\SAIN.dll" />
     <Content Include="IntegrationTests\UpdateSingleFile\local\SAIN.dll" />
     <Content Include="IntegrationTests\UpdateSingleFile\remote\SAIN.dll" />

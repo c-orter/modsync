@@ -9,11 +9,9 @@ namespace ModSync
 {
     public static class Sync
     {
-        private static readonly Server server = new();
-
         public static List<string> GetAddedFiles(Dictionary<string, ModFile> localModFiles, Dictionary<string, ModFile> remoteModFiles)
         {
-            return remoteModFiles.Keys.Except(localModFiles.Keys).ToList();
+            return remoteModFiles.Keys.Except(localModFiles.Keys, StringComparer.OrdinalIgnoreCase).ToList();
         }
 
         public static List<string> GetUpdatedFiles(
@@ -22,10 +20,10 @@ namespace ModSync
             Dictionary<string, ModFile> previousRemoteModFiles
         )
         {
-            var intersection = localModFiles.Keys.Intersect(remoteModFiles.Keys);
+            var intersection = localModFiles.Keys.Intersect(remoteModFiles.Keys, StringComparer.OrdinalIgnoreCase);
 
             if (previousRemoteModFiles.Count > 0)
-                intersection.Intersect(previousRemoteModFiles.Keys);
+                intersection.Intersect(previousRemoteModFiles.Keys, StringComparer.OrdinalIgnoreCase);
 
             return intersection
                 .Where((key) => !localModFiles[key].nosync)
@@ -40,7 +38,10 @@ namespace ModSync
             Dictionary<string, ModFile> previousRemoteModFiles
         )
         {
-            return previousRemoteModFiles.Keys.Intersect(localModFiles.Keys).Except(remoteModFiles.Keys).ToList();
+            return previousRemoteModFiles
+                .Keys.Intersect(localModFiles.Keys, StringComparer.OrdinalIgnoreCase)
+                .Except(remoteModFiles.Keys, StringComparer.OrdinalIgnoreCase)
+                .ToList();
         }
 
         public static Dictionary<string, ModFile> HashLocalFiles(string basePath, List<string> enabledSyncPaths)
@@ -56,7 +57,7 @@ namespace ModSync
                             .Where((file) => !file.EndsWith(".nosync") && !file.EndsWith(".nosync.txt"))
                             .Select((file) => CreateModFile(basePath, file))
                 )
-                .ToDictionary(item => item.Key, item => item.Value);
+                .ToDictionary(item => item.Key, item => item.Value, StringComparer.OrdinalIgnoreCase);
         }
 
         public static KeyValuePair<string, ModFile> CreateModFile(string basePath, string file)

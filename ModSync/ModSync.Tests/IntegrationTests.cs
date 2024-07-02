@@ -188,5 +188,29 @@ namespace ModSync
             Assert.AreEqual(downloadedFiles.Count, 0);
             CollectionAssert.AreEquivalent(persist.filesToDelete, new List<string>() { "SAIN.dll" });
         }
+
+        [TestMethod]
+        public void TestMismatchedCases()
+        {
+            string testPath = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "..\\..\\IntegrationTests", "MismatchedCases"));
+
+            List<string> downloadedFiles = [];
+
+            var persist = RunPlugin(
+                testPath,
+                syncPaths: ["SAIN.dll", "TeSt.dll"],
+                configDeleteRemovedFiles: true,
+                out List<string> addedFiles,
+                out List<string> updatedFiles,
+                out List<string> removedFiles,
+                ref downloadedFiles
+            );
+
+            Assert.AreEqual(addedFiles.Count, 0);
+            Assert.AreEqual(updatedFiles.Count, 1);
+            Assert.AreEqual(removedFiles.Count, 0);
+
+            Assert.AreEqual(downloadedFiles.Count, 1);
+        }
     }
 }

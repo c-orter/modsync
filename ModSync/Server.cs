@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -47,7 +48,8 @@ namespace ModSync
 
         public Dictionary<string, ModFile> GetRemoteModFileHashes()
         {
-            return Json.Deserialize<Dictionary<string, ModFile>>(RequestHandler.GetJson("/modsync/hashes"));
+            return Json.Deserialize<Dictionary<string, ModFile>>(RequestHandler.GetJson("/modsync/hashes"))
+                .ToDictionary(item => item.Key, item => item.Value, StringComparer.OrdinalIgnoreCase);
         }
     }
 }

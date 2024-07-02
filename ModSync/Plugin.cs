@@ -130,7 +130,9 @@ namespace ModSync
                 var version = server.GetModSyncVersion();
                 Logger.LogInfo($"ModSync found server version: {version}");
                 if (version != Info.Metadata.Version.ToString())
-                    Logger.LogWarning("ModSync server version does not match plugin version. Found server version: " + version + ". Plugin may not work as expected!");
+                    Logger.LogWarning(
+                        "ModSync server version does not match plugin version. Found server version: " + version + ". Plugin may not work as expected!"
+                    );
             }
             catch (Exception e)
             {
@@ -213,6 +215,7 @@ namespace ModSync
             try
             {
                 persist = VFS.Exists(persistPath) ? Json.Deserialize<Persist>(File.ReadAllText(persistPath)) : new();
+                persist.previousSync = persist.previousSync.ToDictionary(item => item.Key, item => item.Value, StringComparer.OrdinalIgnoreCase);
             }
             catch (Exception e)
             {
