@@ -198,7 +198,7 @@ namespace ModSync
 
             var persist = RunPlugin(
                 testPath,
-                syncPaths: ["SAIN.dll", "TeSt.dll"],
+                syncPaths: ["plugins"],
                 configDeleteRemovedFiles: true,
                 out List<string> addedFiles,
                 out List<string> updatedFiles,
@@ -211,6 +211,7 @@ namespace ModSync
             Assert.AreEqual(removedFiles.Count, 0);
 
             Assert.AreEqual(downloadedFiles.Count, 1);
+            Assert.AreEqual(downloadedFiles[0], "plugins\\sain.dll");
         }
     }
 }

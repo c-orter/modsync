@@ -20,7 +20,7 @@ namespace ModSync
             Dictionary<string, ModFile> previousRemoteModFiles
         )
         {
-            var intersection = localModFiles.Keys.Intersect(remoteModFiles.Keys, StringComparer.OrdinalIgnoreCase);
+            var intersection = remoteModFiles.Keys.Intersect(localModFiles.Keys, StringComparer.OrdinalIgnoreCase);
 
             if (previousRemoteModFiles.Count > 0)
                 intersection.Intersect(previousRemoteModFiles.Keys, StringComparer.OrdinalIgnoreCase);
