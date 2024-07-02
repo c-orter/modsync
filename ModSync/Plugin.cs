@@ -16,7 +16,7 @@ using UnityEngine;
 
 namespace ModSync
 {
-    [BepInPlugin("corter.modsync", "Corter ModSync", "0.5.0")]
+    [BepInPlugin("corter.modsync", "Corter ModSync", "0.5.1")]
     public class Plugin : BaseUnityPlugin
     {
         // Configuration
