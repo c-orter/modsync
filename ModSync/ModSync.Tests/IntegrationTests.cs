@@ -26,8 +26,8 @@ namespace ModSync
             var persistPath = Path.Combine(localPath, ".modsync");
             var oldPersist = VFS.Exists(persistPath) ? Json.Deserialize<Persist>(File.ReadAllText(persistPath)) : new();
 
-            var remoteModFiles = Sync.HashLocalFiles(remotePath, syncPaths);
-            var localModFiles = Sync.HashLocalFiles(localPath, syncPaths);
+            var remoteModFiles = Sync.HashLocalFiles(remotePath, syncPaths, syncPaths);
+            var localModFiles = Sync.HashLocalFiles(localPath, syncPaths, syncPaths);
 
             Sync.CompareModFiles(localModFiles, remoteModFiles, oldPersist.previousSync, out addedFiles, out updatedFiles, out removedFiles);
 

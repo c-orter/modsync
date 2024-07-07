@@ -11,6 +11,7 @@ import type { HttpListenerModService } from "@spt-aki/services/mod/httpListener/
 import type { HttpFileUtil } from "@spt-aki/utils/HttpFileUtil";
 import type { VFS } from "@spt-aki/utils/VFS";
 import type { JsonUtil } from "@spt-aki/utils/JsonUtil";
+import { globRegex } from "./glob";
 
 type ModFile = { crc: number; modified: number };
 
@@ -52,15 +53,8 @@ class Mod implements IPreAkiLoadMod {
 			);
 		}
 
-		Mod.commonModExclusionsRegex = Mod.config.commonModExclusions.map(
-			(exclusion) =>
-				new RegExp(
-					`${exclusion
-						.split(path.posix.sep)
-						.join(path.sep)
-						.replaceAll("\\", "\\\\")}$`,
-				),
-		);
+		Mod.commonModExclusionsRegex =
+			Mod.config.commonModExclusions.map(globRegex);
 
 		if (
 			Mod.config.syncPaths === undefined ||
@@ -153,7 +147,12 @@ class Mod implements IPreAkiLoadMod {
 									!vfs.exists(`${file}.nosync`) &&
 									!vfs.exists(`${file}.nosync.txt`) &&
 									!Mod.commonModExclusionsRegex.some((exclusion) =>
-										exclusion.test(file),
+										exclusion.test(
+											path
+												.relative(process.cwd(), file)
+												.split(path.win32.sep)
+												.join(path.posix.sep),
+										),
 									),
 							),
 						...vfs
@@ -164,7 +163,12 @@ class Mod implements IPreAkiLoadMod {
 									!vfs.exists(path.join(subDir, ".nosync")) &&
 									!vfs.exists(path.join(subDir, ".nosync.txt")) &&
 									!Mod.commonModExclusionsRegex.some((exclusion) =>
-										exclusion.test(subDir),
+										exclusion.test(
+											path
+												.relative(process.cwd(), subDir)
+												.split(path.win32.sep)
+												.join(path.posix.sep),
+										),
 									),
 							)
 							.flatMap((subDir) => getFilesInDir(subDir)),
@@ -174,7 +178,7 @@ class Mod implements IPreAkiLoadMod {
 				}
 			};
 
-			const buildModFile = async (file: string) => {
+			const buildModFile = async (file: string): Promise<[string, ModFile]> => {
 				// biome-ignore lint/style/noNonNullAssertion: <explanation>
 				const parent = hashPaths.find(
 					(syncPath) => !path.relative(syncPath, file).startsWith(".."),

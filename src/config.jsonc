@@ -16,9 +16,9 @@
 		// Fika
 		"user/mods/fika-server/types",
 		// General server mods
-		"user/mods/.*/.git",
-		"user/mods/.*/node_modules",
-		"user/mods/.*/[^/]*.js",
-		"user/mods/.*/[^/]*.js.map"
+		"user/mods/**/.git",
+		"user/mods/**/node_modules",
+		"user/mods/**/*.js",
+		"user/mods/**/*.js.map"
 	]
 }
