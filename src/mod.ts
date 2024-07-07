@@ -19,7 +19,7 @@ class Mod implements IPreAkiLoadMod {
 	private static container: DependencyContainer;
 
 	private static loadFailed = false;
-	private modFileHashes?: Record<string, ModFile>;
+	private static modFileHashes?: Record<string, ModFile>;
 	private static config: { syncPaths: string[]; commonModExclusions: string[] };
 	private static commonModExclusionsRegex: RegExp[];
 	private static syncPathsUpdated = false;
@@ -249,17 +249,17 @@ class Mod implements IPreAkiLoadMod {
 					),
 				);
 			} else if (req.url === "/modsync/hashes") {
-				if (this.modFileHashes === undefined || Mod.syncPathsUpdated) {
+				if (Mod.modFileHashes === undefined || Mod.syncPathsUpdated) {
 					Mod.syncPathsUpdated = false;
-					this.modFileHashes = await getFileHashes(
+					Mod.modFileHashes = await getFileHashes(
 						Mod.config.syncPaths.filter(vfs.exists),
 					);
 				}
 
 				resp.setHeader("Content-Type", "application/json");
 				resp.writeHead(200, "OK");
-				resp.end(JSON.stringify(this.modFileHashes));
-			} else if (req.url?.startsWith("/modsync/fetch/")) {
+				resp.end(JSON.stringify(Mod.modFileHashes));
+			} else if (req.url && req.url.startsWith("/modsync/fetch/")) {
 				const filePath = decodeURIComponent(
 					// biome-ignore lint/style/noNonNullAssertion: <explanation>
 					req.url.split("/modsync/fetch/").at(-1)!,

@@ -16,12 +16,12 @@ using UnityEngine;
 
 namespace ModSync
 {
-    [BepInPlugin("corter.modsync", "Corter ModSync", "0.5.2")]
+    [BepInPlugin("corter.modsync", "Corter ModSync", "0.6.0")]
     public class Plugin : BaseUnityPlugin
     {
         // Configuration
-        Dictionary<string, ConfigEntry<bool>> configSyncPathToggles;
-        ConfigEntry<bool> configDeleteRemovedFiles;
+        private Dictionary<string, ConfigEntry<bool>> configSyncPathToggles;
+        private ConfigEntry<bool> configDeleteRemovedFiles;
 
         private Persist persist;
         private string[] syncPaths = [];
@@ -30,15 +30,17 @@ namespace ModSync
         private List<string> updatedFiles = [];
         private List<string> removedFiles = [];
 
+        private List<Task> downloadTasks = [];
+
         private int UpdateCount => addedFiles.Count + updatedFiles.Count + removedFiles.Count;
-        private bool pluginFinished = false;
-        private bool cancelledUpdate = false;
-        private int downloadCount = 0;
+        private bool pluginFinished;
+        private int downloadCount;
         private string downloadDir = string.Empty;
 
         private readonly Server server = new();
+        private CancellationTokenSource cts = new();
 
-        public static new ManualLogSource Logger = BepInEx.Logging.Logger.CreateLogSource("ModSync");
+        public static new readonly ManualLogSource Logger = BepInEx.Logging.Logger.CreateLogSource("ModSync");
 
         private List<string> EnabledSyncPaths => syncPaths.Where((syncPath) => configSyncPathToggles[syncPath].Value).ToList();
 
@@ -79,24 +81,41 @@ namespace ModSync
 
             var limiter = new SemaphoreSlim(32, maxCount: 32);
 
-            var taskList = addedFiles.Union(updatedFiles).Select((file) => server.DownloadFile(file, downloadDir, limiter)).ToList();
+            downloadTasks = addedFiles.Union(updatedFiles).Select((file) => server.DownloadFile(file, downloadDir, limiter, cts.Token)).ToList();
 
-            while (taskList.Count > 0)
+            while (downloadTasks.Count > 0 && !cts.IsCancellationRequested)
             {
-                var task = await Task.WhenAny(taskList);
-                taskList.Remove(task);
+                var task = await Task.WhenAny(downloadTasks);
+
+                try
+                {
+                    await task;
+                }
+                catch (TaskCanceledException) { }
+                catch
+                {
+                    cts.Cancel();
+                    progressWindow.Hide();
+                    downloadErrorWindow.Show();
+                }
+
+                downloadTasks.Remove(task);
                 downloadCount++;
             }
 
+            downloadTasks.Clear();
+
             progressWindow.Hide();
-            if (!cancelledUpdate)
+            if (!cts.IsCancellationRequested)
                 restartWindow.Show();
         }
 
-        private void CancelUpdatingMods()
+        private async Task CancelUpdatingMods()
         {
             progressWindow.Hide();
-            cancelledUpdate = true;
+            cts.Cancel();
+
+            await Task.WhenAll(downloadTasks);
 
             Directory.Delete(downloadDir, true);
             downloadDir = string.Empty;
@@ -106,7 +125,7 @@ namespace ModSync
 
         private void FinishUpdatingMods()
         {
-            Persist persist =
+            Persist newPersist =
                 new()
                 {
                     previousSync = remoteModFiles,
@@ -114,13 +133,14 @@ namespace ModSync
                     filesToDelete = configDeleteRemovedFiles.Value ? removedFiles : []
                 };
 
-            VFS.WriteTextFile(Path.Combine(Directory.GetCurrentDirectory(), ".modsync"), Json.Serialize(persist));
+            VFS.WriteTextFile(Path.Combine(Directory.GetCurrentDirectory(), ".modsync"), Json.Serialize(newPersist));
 
             Application.Quit();
         }
 
         private void StartPlugin()
         {
+            cts = new();
             if (persist.downloadDir != string.Empty || persist.filesToDelete.Count != 0)
             {
                 Chainloader.DependencyErrors.Add(
@@ -194,8 +214,13 @@ namespace ModSync
         }
 
         private readonly AlertWindow alertWindow = new("Installed mods do not match server", "Would you like to update?");
+
         private readonly ProgressWindow progressWindow = new("Downloading Updates...", "Your game will need to be restarted\nafter update completes.");
+
         private readonly RestartWindow restartWindow = new("Update Complete.", "Please restart your game to continue.");
+
+        private readonly AlertWindow downloadErrorWindow =
+            new("Download failed!", "There was an error updating mod files.\nPlease check BepInEx/LogOutput.log for more information.", "QUIT");
 
         private void Awake()
         {
@@ -236,17 +261,18 @@ namespace ModSync
 
         private void OnGUI()
         {
-            if (Singleton<CommonUI>.Instantiated)
-            {
-                restartWindow.Draw(FinishUpdatingMods);
-                progressWindow.Draw(downloadCount, UpdateCount, CancelUpdatingMods);
-                alertWindow.Draw(() => Task.Run(() => SyncMods()), SkipUpdatingMods);
-            }
+            if (!Singleton<CommonUI>.Instantiated)
+                return;
+
+            restartWindow.Draw(FinishUpdatingMods);
+            progressWindow.Draw(downloadCount, UpdateCount, () => Task.Run(CancelUpdatingMods));
+            alertWindow.Draw(() => Task.Run(SyncMods), SkipUpdatingMods);
+            downloadErrorWindow.Draw(Application.Quit, null);
         }
 
         public void Update()
         {
-            if (alertWindow.Active || progressWindow.Active || restartWindow.Active)
+            if (alertWindow.Active || progressWindow.Active || restartWindow.Active || downloadErrorWindow.Active)
             {
                 if (Singleton<LoginUI>.Instantiated && Singleton<LoginUI>.Instance.gameObject.activeSelf)
                     Singleton<LoginUI>.Instance.gameObject.SetActive(false);

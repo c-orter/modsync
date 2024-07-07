@@ -12,27 +12,38 @@ namespace ModSync
 {
     public class Server
     {
-        public async Task DownloadFile(string file, string downloadDir, SemaphoreSlim limiter)
+        public async Task DownloadFile(string file, string downloadDir, SemaphoreSlim limiter,
+            CancellationToken cancellationToken = default)
         {
+            if (cancellationToken.IsCancellationRequested)
+                return;
+
             var downloadPath = Path.Combine(downloadDir, file);
             VFS.CreateDirectory(downloadPath.GetDirectory());
 
-            if (file == "BepInEx\\patchers\\Corter-ModSync-Patcher.dll")
-                downloadPath = Path.Combine(Directory.GetCurrentDirectory(), "BepInEx\\patchers\\Corter-ModSync-Patcher.dll");
+            if (file == @"BepInEx\patchers\Corter-ModSync-Patcher.dll")
+                downloadPath = Path.Combine(Directory.GetCurrentDirectory(),
+                    @"BepInEx\patchers\Corter-ModSync-Patcher.dll");
 
             try
             {
-                await limiter.WaitAsync();
+                await limiter.WaitAsync(cancellationToken);
                 using var client = new HttpClient();
                 using var fileStream = new FileStream(downloadPath, FileMode.CreateNew);
                 using var responseStream = await client.GetStreamAsync($@"{RequestHandler.Host}/modsync/fetch/{file}");
 
-                await responseStream.CopyToAsync(fileStream);
+                await responseStream.CopyToAsync(fileStream, (int)responseStream.Length, cancellationToken);
                 limiter.Release();
+            }
+            catch (TaskCanceledException)
+            {
+                throw;
             }
             catch (Exception e)
             {
+                Plugin.Logger.LogError($"Failed to download '{file}'. Please see the stacktrace below for details.");
                 Plugin.Logger.LogError(e);
+                throw;
             }
         }
 

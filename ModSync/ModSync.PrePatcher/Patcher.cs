@@ -11,7 +11,7 @@ namespace ModSync.PrePatcher
     {
         public static IEnumerable<string> TargetDLLs { get; } = ["Assembly-CSharp.dll"];
 
-        public static void Cleanup(string persistPath, Persist persist)
+        private static void Cleanup(string persistPath, Persist persist)
         {
             persist.downloadDir = string.Empty;
             persist.filesToDelete.Clear();
@@ -46,8 +46,8 @@ namespace ModSync.PrePatcher
                 if (File.Exists(file))
                     File.Delete(file);
 
-                if (Directory.GetParent(file).GetFiles("*.*", SearchOption.AllDirectories).Count() == 0)
-                    Directory.GetParent(file).Delete();
+                if (!Directory.GetParent(file)!.GetFiles("*.*", SearchOption.AllDirectories).Any())
+                    Directory.GetParent(file)!.Delete();
             }
 
             Cleanup(persistPath, persist);

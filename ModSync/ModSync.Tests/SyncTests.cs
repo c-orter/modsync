@@ -6,7 +6,7 @@ using System.Text;
 using Aki.Custom.Utils;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace ModSync
+namespace ModSync.Tests
 {
     [TestClass]
     public class AddedFilesTests
@@ -24,11 +24,11 @@ namespace ModSync
 
             var addedFiles = Sync.GetAddedFiles(localModFiles, remoteModFiles);
 
-            CollectionAssert.AreEqual(addedFiles, new List<string>() { "BepInEx\\plugins\\Corter-ModSync.dll" });
+            CollectionAssert.AreEqual(new List<string>() { @"BepInEx\plugins\Corter-ModSync.dll" }, addedFiles);
         }
 
         [TestMethod]
-        public void TestOnlyModified()
+        public void TestSingleAddedNoSync()
         {
             var localModFiles = new Dictionary<string, ModFile>() { { @"BepInEx\plugins\SAIN\SAIN.dll", new(1234567) } };
 
@@ -40,12 +40,12 @@ namespace ModSync
 
             var addedFiles = Sync.GetAddedFiles(localModFiles, remoteModFiles);
 
-            Assert.AreEqual(addedFiles.Count, 0);
+            CollectionAssert.AreEqual(new List<string>() { @"BepInEx\plugins\Corter-ModSync.dll" }, addedFiles);
         }
     }
 
     [TestClass]
-    public class ModifiedFilesTests
+    public class UpdatedFilesTests
     {
         [TestMethod]
         public void TestSingleAdded()
@@ -62,7 +62,7 @@ namespace ModSync
 
             var updatedFiles = Sync.GetUpdatedFiles(localModFiles, remoteModFiles, previousRemoteModFiles);
 
-            Assert.AreEqual(updatedFiles.Count, 0);
+            Assert.AreEqual(0, updatedFiles.Count);
         }
 
         [TestMethod]
@@ -88,7 +88,7 @@ namespace ModSync
 
             var updatedFiles = Sync.GetUpdatedFiles(localModFiles, remoteModFiles, previousRemoteModFiles);
 
-            CollectionAssert.AreEqual(updatedFiles, new List<string>() { "BepInEx\\plugins\\Corter-ModSync.dll" });
+            CollectionAssert.AreEqual(new List<string>() { @"BepInEx\plugins\Corter-ModSync.dll" }, updatedFiles);
         }
 
         [TestMethod]
@@ -114,7 +114,7 @@ namespace ModSync
 
             var updatedFiles = Sync.GetUpdatedFiles(localModFiles, remoteModFiles, previousRemoteModFiles);
 
-            Assert.AreEqual(updatedFiles.Count, 0);
+            Assert.AreEqual(0, updatedFiles.Count);
         }
     }
 
@@ -140,7 +140,7 @@ namespace ModSync
 
             var removedFiles = Sync.GetRemovedFiles(localModFiles, remoteModFiles, previousRemoteModFiles);
 
-            CollectionAssert.AreEqual(removedFiles, new List<string>() { "BepInEx\\plugins\\Corter-ModSync.dll" });
+            CollectionAssert.AreEqual(new List<string>() { @"BepInEx\plugins\Corter-ModSync.dll" }, removedFiles);
         }
     }
 
@@ -150,16 +150,16 @@ namespace ModSync
         readonly Dictionary<string, string> fileContents =
             new()
             {
-                { "file1.dll", "Test content" },
-                { "file2.dll", "Test content 2" },
-                { "file2.dll.nosync", "" },
-                { "file3.dll", "Test content 3" },
-                { "file3.dll.nosync.txt", "" },
-                { "ModName\\mod_name.dll", "Test content 4" },
-                { "ModName\\.nosync", "" },
-                { "OtherMod\\other_mod.dll", "Test content 5" },
-                { "OtherMod\\subdir\\image.png", "Test Image" },
-                { "OtherMod\\subdir\\.nosync", "" }
+                { @"plugins\file1.dll", "Test content" },
+                { @"plugins\file2.dll", "Test content 2" },
+                { @"plugins\file2.dll.nosync", "" },
+                { @"plugins\file3.dll", "Test content 3" },
+                { @"plugins\file3.dll.nosync.txt", "" },
+                { @"plugins\ModName\mod_name.dll", "Test content 4" },
+                { @"plugins\ModName\.nosync", "" },
+                { @"plugins\OtherMod\other_mod.dll", "Test content 5" },
+                { @"plugins\OtherMod\subdir\image.png", "Test Image" },
+                { @"plugins\OtherMod\subdir\.nosync", "" }
             };
 
         string testDirectory;
@@ -177,7 +177,7 @@ namespace ModSync
                 var filePath = Path.Combine(testDirectory, kvp.Key);
                 var fileParent = Path.GetDirectoryName(filePath);
 
-                if (!Directory.Exists(fileParent))
+                if (fileParent != null && !Directory.Exists(fileParent))
                     Directory.CreateDirectory(fileParent);
 
                 File.WriteAllText(filePath, kvp.Value);
@@ -201,15 +201,15 @@ namespace ModSync
             var result = Sync.HashLocalFiles(testDirectory, ["plugins"], ["plugins"]);
 
             Assert.IsNotNull(result);
-            Assert.AreEqual(result.Count, expected.Count);
+            Assert.AreEqual(expected.Count, result.Count);
 
             foreach (var kvp in expected)
             {
                 Assert.IsTrue(result.ContainsKey(kvp.Key));
-                Assert.AreEqual(result[kvp.Key].crc, Crc32.Compute(Encoding.ASCII.GetBytes(kvp.Value)));
+                Assert.AreEqual(Crc32.Compute(Encoding.ASCII.GetBytes(kvp.Value)), result[kvp.Key].crc);
             }
 
-            Assert.AreEqual(result.Where(kvp => !kvp.Value.nosync).Count(), 2);
+            Assert.AreEqual(2, result.Count(kvp => !kvp.Value.nosync));
         }
 
         [TestMethod]
@@ -217,7 +217,7 @@ namespace ModSync
         {
             var result = Sync.HashLocalFiles(testDirectory, ["bad_directory"], ["bad_directory"]);
             Assert.IsNotNull(result);
-            Assert.AreEqual(result.Count, 0);
+            Assert.AreEqual(0, result.Count);
         }
 
         [TestMethod]
@@ -229,8 +229,8 @@ namespace ModSync
                 [Path.Combine(testDirectory, "plugins\\file1.dll")]
             );
             Assert.IsNotNull(result);
-            Assert.AreEqual(result.Count, 1);
-            Assert.IsTrue(result.ContainsKey("file1.dll"));
+            Assert.AreEqual(1, result.Count);
+            Assert.IsTrue(result.ContainsKey("plugins\\file1.dll"));
         }
 
         [TestMethod]

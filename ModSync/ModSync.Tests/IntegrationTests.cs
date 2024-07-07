@@ -5,12 +5,12 @@ using System.Linq;
 using Aki.Common.Utils;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace ModSync
+namespace ModSync.Tests
 {
     [TestClass]
     public class IntegrationTests
     {
-        private Persist RunPlugin(
+        private static Persist RunPlugin(
             string testPath,
             List<string> syncPaths,
             bool configDeleteRemovedFiles,
@@ -31,8 +31,7 @@ namespace ModSync
 
             Sync.CompareModFiles(localModFiles, remoteModFiles, oldPersist.previousSync, out addedFiles, out updatedFiles, out removedFiles);
 
-            foreach (var file in addedFiles.Union(updatedFiles))
-                downloadedFiles.Add(file);
+            downloadedFiles.AddRange(addedFiles.Union(updatedFiles));
 
             Persist newPersist =
                 new()
@@ -48,7 +47,7 @@ namespace ModSync
         [TestMethod]
         public void TestInitialEmptySingleFile()
         {
-            string testPath = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "..\\..\\IntegrationTests", "InitialEmptySingleFile"));
+            var testPath = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), @"..\..\IntegrationTests", "InitialEmptySingleFile"));
 
             List<string> downloadedFiles = [];
 
@@ -56,29 +55,29 @@ namespace ModSync
                 testPath,
                 syncPaths: ["SAIN.dll"],
                 configDeleteRemovedFiles: true,
-                out List<string> addedFiles,
-                out List<string> updatedFiles,
-                out List<string> removedFiles,
+                out var addedFiles,
+                out var updatedFiles,
+                out var removedFiles,
                 ref downloadedFiles
             );
 
-            Assert.AreEqual(addedFiles.Count, 1);
-            Assert.AreEqual(updatedFiles.Count, 0);
-            Assert.AreEqual(removedFiles.Count, 0);
+            Assert.AreEqual(1, addedFiles.Count);
+            Assert.AreEqual(0, updatedFiles.Count);
+            Assert.AreEqual(0, removedFiles.Count);
 
-            Assert.AreEqual(downloadedFiles.Count, 1);
+            Assert.AreEqual(1, downloadedFiles.Count);
             Assert.IsTrue(downloadedFiles.Contains("SAIN.dll"));
 
-            Assert.AreEqual(persist.filesToDelete.Count, 0);
+            Assert.AreEqual(0, persist.filesToDelete.Count);
 
-            Assert.AreEqual(persist.previousSync.Count, 1);
+            Assert.AreEqual(1, persist.previousSync.Count);
             Assert.IsTrue(persist.previousSync.ContainsKey("SAIN.dll"));
         }
 
         [TestMethod]
         public void TestInitialEmptyManyFiles()
         {
-            string testPath = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "..\\..\\IntegrationTests", "InitialEmptyManyFiles"));
+            var testPath = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), @"..\..\IntegrationTests", "InitialEmptyManyFiles"));
 
             List<string> downloadedFiles = [];
 
@@ -86,33 +85,29 @@ namespace ModSync
                 testPath,
                 syncPaths: ["plugins"],
                 configDeleteRemovedFiles: true,
-                out List<string> addedFiles,
-                out List<string> updatedFiles,
-                out List<string> removedFiles,
+                out var addedFiles,
+                out var updatedFiles,
+                out var removedFiles,
                 ref downloadedFiles
             );
 
-            Assert.AreEqual(addedFiles.Count, 2);
-            Assert.AreEqual(updatedFiles.Count, 0);
-            Assert.AreEqual(removedFiles.Count, 0);
+            Assert.AreEqual(2, addedFiles.Count);
+            Assert.AreEqual(0, updatedFiles.Count);
+            Assert.AreEqual(0, removedFiles.Count);
+            
+            Assert.AreEqual(2, downloadedFiles.Count);
+            CollectionAssert.AreEquivalent(new List<string>() { @"plugins\SAIN.dll", @"plugins\Corter-ModSync.dll" }, downloadedFiles);
 
-            Assert.AreEqual(addedFiles.Count, 2);
-            Assert.AreEqual(updatedFiles.Count, 0);
-            Assert.AreEqual(removedFiles.Count, 0);
+            Assert.AreEqual(0, persist.filesToDelete.Count);
 
-            Assert.AreEqual(downloadedFiles.Count, 2);
-            CollectionAssert.AreEquivalent(downloadedFiles, new List<string>() { "plugins\\SAIN.dll", "plugins\\Corter-ModSync.dll" });
-
-            Assert.AreEqual(persist.filesToDelete.Count, 0);
-
-            Assert.AreEqual(persist.previousSync.Count, 2);
-            CollectionAssert.AreEquivalent(persist.previousSync.Keys, new List<string>() { "plugins\\SAIN.dll", "plugins\\Corter-ModSync.dll" });
+            Assert.AreEqual(2, persist.previousSync.Count);
+            CollectionAssert.AreEquivalent(new List<string>() { @"plugins\SAIN.dll", @"plugins\Corter-ModSync.dll" }, persist.previousSync.Keys);
         }
 
         [TestMethod]
         public void TestUpdateSingleFile()
         {
-            string testPath = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "..\\..\\IntegrationTests", "UpdateSingleFile"));
+            var testPath = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), @"..\..\IntegrationTests", "UpdateSingleFile"));
 
             List<string> downloadedFiles = [];
 
@@ -120,29 +115,29 @@ namespace ModSync
                 testPath,
                 syncPaths: ["SAIN.dll"],
                 configDeleteRemovedFiles: true,
-                out List<string> addedFiles,
-                out List<string> updatedFiles,
-                out List<string> removedFiles,
+                out var addedFiles,
+                out var updatedFiles,
+                out var removedFiles,
                 ref downloadedFiles
             );
 
-            Assert.AreEqual(addedFiles.Count, 0);
-            Assert.AreEqual(updatedFiles.Count, 1);
-            Assert.AreEqual(removedFiles.Count, 0);
+            Assert.AreEqual(0, addedFiles.Count);
+            Assert.AreEqual(1, updatedFiles.Count);
+            Assert.AreEqual(0, removedFiles.Count);
 
-            Assert.AreEqual(downloadedFiles.Count, 1);
+            Assert.AreEqual(1, downloadedFiles.Count);
             Assert.IsTrue(downloadedFiles.Contains("SAIN.dll"));
 
-            Assert.AreEqual(persist.filesToDelete.Count, 0);
+            Assert.AreEqual(0, persist.filesToDelete.Count);
 
-            Assert.AreEqual(persist.previousSync.Count, 1);
+            Assert.AreEqual(1, persist.previousSync.Count);
             Assert.IsTrue(persist.previousSync.ContainsKey("SAIN.dll"));
         }
 
         [TestMethod]
         public void TestDoNotUpdateWhenLocalChanges()
         {
-            string testPath = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "..\\..\\IntegrationTests", "DoNotUpdateWhenLocalChanges"));
+            var testPath = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), @"..\..\IntegrationTests", "DoNotUpdateWhenLocalChanges"));
 
             List<string> downloadedFiles = [];
 
@@ -150,24 +145,24 @@ namespace ModSync
                 testPath,
                 syncPaths: ["SAIN.dll"],
                 configDeleteRemovedFiles: true,
-                out List<string> addedFiles,
-                out List<string> updatedFiles,
-                out List<string> removedFiles,
+                out var addedFiles,
+                out var updatedFiles,
+                out var removedFiles,
                 ref downloadedFiles
             );
 
-            Assert.AreEqual(addedFiles.Count, 0);
-            Assert.AreEqual(updatedFiles.Count, 0);
-            Assert.AreEqual(removedFiles.Count, 0);
+            Assert.AreEqual(0, addedFiles.Count);
+            Assert.AreEqual(0, updatedFiles.Count);
+            Assert.AreEqual(0, removedFiles.Count);
 
-            Assert.AreEqual(downloadedFiles.Count, 0);
-            Assert.AreEqual(persist.previousSync["SAIN.dll"].crc, 0u);
+            Assert.AreEqual(0, downloadedFiles.Count);
+            Assert.AreEqual(0u, persist.previousSync["SAIN.dll"].crc);
         }
 
         [TestMethod]
         public void TestRemoveSingleFile()
         {
-            string testPath = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "..\\..\\IntegrationTests", "RemoveSingleFile"));
+            var testPath = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), @"..\..\IntegrationTests", "RemoveSingleFile"));
 
             List<string> downloadedFiles = [];
 
@@ -175,24 +170,24 @@ namespace ModSync
                 testPath,
                 syncPaths: ["SAIN.dll"],
                 configDeleteRemovedFiles: true,
-                out List<string> addedFiles,
-                out List<string> updatedFiles,
-                out List<string> removedFiles,
+                out var addedFiles,
+                out var updatedFiles,
+                out var removedFiles,
                 ref downloadedFiles
             );
 
-            Assert.AreEqual(addedFiles.Count, 0);
-            Assert.AreEqual(updatedFiles.Count, 0);
-            Assert.AreEqual(removedFiles.Count, 1);
+            Assert.AreEqual(0, addedFiles.Count);
+            Assert.AreEqual(0, updatedFiles.Count);
+            Assert.AreEqual(1, removedFiles.Count);
 
-            Assert.AreEqual(downloadedFiles.Count, 0);
-            CollectionAssert.AreEquivalent(persist.filesToDelete, new List<string>() { "SAIN.dll" });
+            Assert.AreEqual(0, downloadedFiles.Count);
+            CollectionAssert.AreEquivalent(new List<string>() { "SAIN.dll" }, persist.filesToDelete);
         }
 
         [TestMethod]
         public void TestMismatchedCases()
         {
-            string testPath = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "..\\..\\IntegrationTests", "MismatchedCases"));
+            var testPath = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), @"..\..\IntegrationTests", "MismatchedCases"));
 
             List<string> downloadedFiles = [];
 
@@ -200,18 +195,18 @@ namespace ModSync
                 testPath,
                 syncPaths: ["plugins"],
                 configDeleteRemovedFiles: true,
-                out List<string> addedFiles,
-                out List<string> updatedFiles,
-                out List<string> removedFiles,
+                out var addedFiles,
+                out var updatedFiles,
+                out var removedFiles,
                 ref downloadedFiles
             );
 
-            Assert.AreEqual(addedFiles.Count, 0);
-            Assert.AreEqual(updatedFiles.Count, 1);
-            Assert.AreEqual(removedFiles.Count, 0);
+            Assert.AreEqual(0, addedFiles.Count);
+            Assert.AreEqual(0, updatedFiles.Count);
+            Assert.AreEqual(0, removedFiles.Count);
 
-            Assert.AreEqual(downloadedFiles.Count, 1);
-            Assert.AreEqual(downloadedFiles[0], "plugins\\sain.dll");
+            Assert.AreEqual(1, downloadedFiles.Count);
+            Assert.AreEqual(@"plugins\sain.dll", downloadedFiles[0]);
         }
     }
 }

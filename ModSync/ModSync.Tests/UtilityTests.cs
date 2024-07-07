@@ -8,7 +8,7 @@ namespace ModSync
     [TestClass]
     public class NoSyncInTreeTest
     {
-        readonly Dictionary<string, string> fileContents =
+        private readonly Dictionary<string, string> fileContents =
             new()
             {
                 { "file1.dll", "Test content" },
@@ -16,12 +16,12 @@ namespace ModSync
                 { "file2.dll.nosync", "" },
                 { "file3.dll", "Test content 3" },
                 { "file3.dll.nosync.txt", "" },
-                { "ModName\\mod_name.dll", "Test content 4" },
-                { "ModName\\.nosync", "" },
-                { "ModName\\subdir\\image.png", "Test Image 1" },
-                { "OtherMod\\other_mod.dll", "Test content 5" },
-                { "OtherMod\\subdir\\image.png", "Test Image 2" },
-                { "OtherMod\\subdir\\.nosync", "" }
+                { @"ModName\mod_name.dll", "Test content 4" },
+                { @"ModName\.nosync", "" },
+                { @"ModName\subdir\image.png", "Test Image 1" },
+                { @"OtherMod\other_mod.dll", "Test content 5" },
+                { @"OtherMod\subdir\image.png", "Test Image 2" },
+                { @"OtherMod\subdir\.nosync", "" }
             };
 
         string testDirectory;
@@ -78,7 +78,7 @@ namespace ModSync
         [TestMethod]
         public void TestNoSyncInTreeWithNoSyncInParent()
         {
-            var result = Utility.NoSyncInTree(testDirectory, "ModName\\subdir\\image.png");
+            var result = Utility.NoSyncInTree(testDirectory, @"ModName\subdir\image.png");
             Assert.IsTrue(result);
         }
     }

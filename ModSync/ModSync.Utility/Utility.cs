@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Aki.Common.Utils;
 
 namespace ModSync
@@ -11,16 +12,10 @@ namespace ModSync
             if (File.Exists(dir))
                 return [dir];
 
-            var files = new List<string>();
-
-            foreach (var directory in VFS.GetDirectories(dir))
-            {
-                foreach (var file in GetFilesInDir(directory))
-                    files.Add(file);
-            }
-
-            foreach (var file in VFS.GetFiles(dir))
-                files.Add(file);
+            var files = VFS.GetDirectories(dir)
+                .SelectMany(GetFilesInDir)
+                .Concat(VFS.GetFiles(dir))
+                .ToList();
 
             return files;
         }
@@ -30,7 +25,7 @@ namespace ModSync
             if (path == baseDir || path == string.Empty)
                 return false;
 
-            string file = Path.Combine(baseDir, path);
+            var file = Path.Combine(baseDir, path);
             if (File.Exists(file))
             {
                 if (VFS.Exists($"{file}.nosync") || VFS.Exists($"{file}.nosync.txt"))
@@ -51,7 +46,7 @@ namespace ModSync
 
         public static string GetTemporaryDirectory()
         {
-            string tempDirectory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+            var tempDirectory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
 
             if (File.Exists(tempDirectory))
                 return GetTemporaryDirectory();
@@ -65,11 +60,11 @@ namespace ModSync
         public static void CopyFilesRecursively(string source, string target, bool overwrite = false) =>
             CopyFilesRecursively(new DirectoryInfo(source), new DirectoryInfo(target), overwrite);
 
-        public static void CopyFilesRecursively(DirectoryInfo source, DirectoryInfo target, bool overwrite = false)
+        private static void CopyFilesRecursively(DirectoryInfo source, DirectoryInfo target, bool overwrite = false)
         {
-            foreach (DirectoryInfo dir in source.GetDirectories())
+            foreach (var dir in source.GetDirectories())
                 CopyFilesRecursively(dir, target.CreateSubdirectory(dir.Name), overwrite);
-            foreach (FileInfo file in source.GetFiles())
+            foreach (var file in source.GetFiles())
                 file.CopyTo(Path.Combine(target.FullName, file.Name), overwrite);
         }
     }
