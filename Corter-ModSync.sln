@@ -1,0 +1,30 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModSync", "ModSync\ModSync.csproj", "{F4413AE8-F4FB-4D5C-8CCD-154AA2B13336}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModSync.PrePatcher", "ModSync.PrePatcher\ModSync.PrePatcher.csproj", "{67D0E573-0411-4B38-A836-065C05EE4559}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModSync.Tests", "ModSync.Tests\ModSync.Tests.csproj", "{ABCAD858-D5D2-4331-800F-4AEE9B339B52}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "ModSync.Utility", "ModSync.Utility\ModSync.Utility.shproj", "{C5E66358-785A-4036-97D5-FF728AD9E98B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F4413AE8-F4FB-4D5C-8CCD-154AA2B13336}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F4413AE8-F4FB-4D5C-8CCD-154AA2B13336}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F4413AE8-F4FB-4D5C-8CCD-154AA2B13336}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F4413AE8-F4FB-4D5C-8CCD-154AA2B13336}.Release|Any CPU.Build.0 = Release|Any CPU
+		{67D0E573-0411-4B38-A836-065C05EE4559}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{67D0E573-0411-4B38-A836-065C05EE4559}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{67D0E573-0411-4B38-A836-065C05EE4559}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{67D0E573-0411-4B38-A836-065C05EE4559}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ABCAD858-D5D2-4331-800F-4AEE9B339B52}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ABCAD858-D5D2-4331-800F-4AEE9B339B52}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ABCAD858-D5D2-4331-800F-4AEE9B339B52}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ABCAD858-D5D2-4331-800F-4AEE9B339B52}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

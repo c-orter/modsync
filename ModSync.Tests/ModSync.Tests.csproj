@@ -93,7 +93,7 @@
     <Folder Include="IntegrationTests\RemoveSingleFile\remote\" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\ModSync.csproj">
+    <ProjectReference Include="..\ModSync\ModSync.csproj">
       <Project>{6337fafc-25ba-4062-b61c-12a614297ae5}</Project>
       <Name>ModSync</Name>
     </ProjectReference>

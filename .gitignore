@@ -1,5 +1,6 @@
-EscapeFromTarkov_Data
 node_modules
-BepInEx
 dist
-*.zip
+*/bin
+*/obj
+packages
+*/.vs
