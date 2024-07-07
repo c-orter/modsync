@@ -3,7 +3,7 @@ import type { DependencyContainer } from "tsyringe";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import path from "node:path";
 import fs from "node:fs";
-import { readFile, stat } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import crc32 from "buffer-crc32";
 import type { IPreAkiLoadMod } from "@spt-aki/models/external/IPreAkiLoadMod";
 import type { ILogger } from "@spt-aki/models/spt/utils/ILogger";

@@ -44,7 +44,11 @@ namespace ModSync
 
         private void AnalyzeModFiles(Dictionary<string, ModFile> localModFiles)
         {
-            remoteModFiles = server.GetRemoteModFileHashes();
+            remoteModFiles = server
+                .GetRemoteModFileHashes()
+                .Where((kvp) => EnabledSyncPaths.Any((syncPath) => kvp.Key == syncPath || kvp.Key.StartsWith($"{syncPath}\\")))
+                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.OrdinalIgnoreCase);
+
             Sync.CompareModFiles(localModFiles, remoteModFiles, persist.previousSync, out addedFiles, out updatedFiles, out removedFiles);
 
             Logger.LogInfo($"Found {UpdateCount} files to download.");
@@ -174,7 +178,7 @@ namespace ModSync
                 )
                 .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 
-            var localModFiles = Sync.HashLocalFiles(Directory.GetCurrentDirectory(), EnabledSyncPaths);
+            var localModFiles = Sync.HashLocalFiles(Directory.GetCurrentDirectory(), [.. syncPaths], EnabledSyncPaths);
 
             try
             {

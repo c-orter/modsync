@@ -11,7 +11,7 @@ namespace ModSync
     {
         public static List<string> GetAddedFiles(Dictionary<string, ModFile> localModFiles, Dictionary<string, ModFile> remoteModFiles)
         {
-            return remoteModFiles.Keys.Except(localModFiles.Keys, StringComparer.OrdinalIgnoreCase).ToList();
+            return remoteModFiles.Keys.Except(localModFiles.Keys.Where((file) => !localModFiles[file].nosync), StringComparer.OrdinalIgnoreCase).ToList();
         }
 
         public static List<string> GetUpdatedFiles(
@@ -23,7 +23,7 @@ namespace ModSync
             var intersection = remoteModFiles.Keys.Intersect(localModFiles.Keys, StringComparer.OrdinalIgnoreCase);
 
             if (previousRemoteModFiles.Count > 0)
-                intersection.Intersect(previousRemoteModFiles.Keys, StringComparer.OrdinalIgnoreCase);
+                intersection = intersection.Intersect(previousRemoteModFiles.Keys, StringComparer.OrdinalIgnoreCase);
 
             return intersection
                 .Where((key) => !localModFiles[key].nosync)
@@ -43,9 +43,9 @@ namespace ModSync
                 .ToList();
         }
 
-        public static Dictionary<string, ModFile> HashLocalFiles(string basePath, List<string> enabledSyncPaths)
+        public static Dictionary<string, ModFile> HashLocalFiles(string basePath, List<string> syncPaths, List<string> enabledSyncPaths)
         {
-            return enabledSyncPaths
+            return syncPaths
                 .Where((syncPath) => VFS.Exists(Path.Combine(basePath, syncPath)))
                 .Select((subDir) => Path.Combine(basePath, subDir))
                 .SelectMany(
@@ -54,12 +54,12 @@ namespace ModSync
                             .GetFilesInDir(path)
                             .AsParallel()
                             .Where((file) => !file.EndsWith(".nosync") && !file.EndsWith(".nosync.txt"))
-                            .Select((file) => CreateModFile(basePath, file))
+                            .Select((file) => CreateModFile(basePath, file, enabledSyncPaths.Contains(path.Remove(0, basePath.Length + 1))))
                 )
                 .ToDictionary(item => item.Key, item => item.Value, StringComparer.OrdinalIgnoreCase);
         }
 
-        public static KeyValuePair<string, ModFile> CreateModFile(string basePath, string file)
+        public static KeyValuePair<string, ModFile> CreateModFile(string basePath, string file, bool enabled)
         {
             var data = VFS.ReadFile(file);
             var relativePath = file.Replace($"{basePath}\\", "");
