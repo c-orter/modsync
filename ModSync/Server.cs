@@ -12,8 +12,7 @@ namespace ModSync
 {
     public class Server
     {
-        public async Task DownloadFile(string file, string downloadDir, SemaphoreSlim limiter,
-            CancellationToken cancellationToken = default)
+        public async Task DownloadFile(string file, string downloadDir, SemaphoreSlim limiter, CancellationToken cancellationToken = default)
         {
             if (cancellationToken.IsCancellationRequested)
                 return;
@@ -22,8 +21,7 @@ namespace ModSync
             VFS.CreateDirectory(downloadPath.GetDirectory());
 
             if (file == @"BepInEx\patchers\Corter-ModSync-Patcher.dll")
-                downloadPath = Path.Combine(Directory.GetCurrentDirectory(),
-                    @"BepInEx\patchers\Corter-ModSync-Patcher.dll");
+                downloadPath = Path.Combine(Directory.GetCurrentDirectory(), @"BepInEx\patchers\Corter-ModSync-Patcher.dll");
 
             try
             {

@@ -94,7 +94,7 @@ namespace ModSync.Tests
             Assert.AreEqual(2, addedFiles.Count);
             Assert.AreEqual(0, updatedFiles.Count);
             Assert.AreEqual(0, removedFiles.Count);
-            
+
             Assert.AreEqual(2, downloadedFiles.Count);
             CollectionAssert.AreEquivalent(new List<string>() { @"plugins\SAIN.dll", @"plugins\Corter-ModSync.dll" }, downloadedFiles);
 

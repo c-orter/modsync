@@ -7,13 +7,15 @@ namespace ModSync.UI
     {
         private readonly AlertBox alertBox = new(title, message, continueText, cancelText);
         public bool Active { get; private set; }
+
         public void Show() => Active = true;
 
         public void Hide() => Active = false;
 
         public void Draw(Action onAccept, Action onDecline)
         {
-            if (!Active) return;
+            if (!Active)
+                return;
 
             float screenWidth = Screen.width;
             float screenHeight = Screen.height;

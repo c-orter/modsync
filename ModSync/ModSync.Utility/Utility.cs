@@ -12,10 +12,7 @@ namespace ModSync
             if (File.Exists(dir))
                 return [dir];
 
-            var files = VFS.GetDirectories(dir)
-                .SelectMany(GetFilesInDir)
-                .Concat(VFS.GetFiles(dir))
-                .ToList();
+            var files = VFS.GetDirectories(dir).SelectMany(GetFilesInDir).Concat(VFS.GetFiles(dir)).ToList();
 
             return files;
         }
