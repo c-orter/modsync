@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace ModSync
+namespace ModSync.Tests
 {
     [TestClass]
     public class NoSyncInTreeTest

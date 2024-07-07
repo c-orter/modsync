@@ -202,7 +202,7 @@ namespace ModSync.Tests
             );
 
             Assert.AreEqual(0, addedFiles.Count);
-            Assert.AreEqual(0, updatedFiles.Count);
+            Assert.AreEqual(1, updatedFiles.Count);
             Assert.AreEqual(0, removedFiles.Count);
 
             Assert.AreEqual(1, downloadedFiles.Count);
