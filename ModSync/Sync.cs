@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Aki.Common.Utils;
-using Aki.Custom.Utils;
+using SPT.Common.Utils;
+using SPT.Custom.Utils;
 
 namespace ModSync
 {

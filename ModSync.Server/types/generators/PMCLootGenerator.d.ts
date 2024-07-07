@@ -1,19 +1,19 @@
-import { ItemHelper } from "@spt-aki/helpers/ItemHelper";
-import { WeightedRandomHelper } from "@spt-aki/helpers/WeightedRandomHelper";
-import { ITemplateItem } from "@spt-aki/models/eft/common/tables/ITemplateItem";
-import { IPmcConfig } from "@spt-aki/models/spt/config/IPmcConfig";
-import { ConfigServer } from "@spt-aki/servers/ConfigServer";
-import { DatabaseServer } from "@spt-aki/servers/DatabaseServer";
-import { ItemFilterService } from "@spt-aki/services/ItemFilterService";
-import { RagfairPriceService } from "@spt-aki/services/RagfairPriceService";
-import { SeasonalEventService } from "@spt-aki/services/SeasonalEventService";
+import { ItemHelper } from "@spt/helpers/ItemHelper";
+import { WeightedRandomHelper } from "@spt/helpers/WeightedRandomHelper";
+import { ITemplateItem } from "@spt/models/eft/common/tables/ITemplateItem";
+import { IPmcConfig } from "@spt/models/spt/config/IPmcConfig";
+import { ConfigServer } from "@spt/servers/ConfigServer";
+import { DatabaseService } from "@spt/services/DatabaseService";
+import { ItemFilterService } from "@spt/services/ItemFilterService";
+import { RagfairPriceService } from "@spt/services/RagfairPriceService";
+import { SeasonalEventService } from "@spt/services/SeasonalEventService";
 /**
  * Handle the generation of dynamic PMC loot in pockets and backpacks
  * and the removal of blacklisted items
  */
 export declare class PMCLootGenerator {
     protected itemHelper: ItemHelper;
-    protected databaseServer: DatabaseServer;
+    protected databaseService: DatabaseService;
     protected configServer: ConfigServer;
     protected itemFilterService: ItemFilterService;
     protected ragfairPriceService: RagfairPriceService;
@@ -23,8 +23,7 @@ export declare class PMCLootGenerator {
     protected vestLootPool: Record<string, number>;
     protected backpackLootPool: Record<string, number>;
     protected pmcConfig: IPmcConfig;
-    protected roubleTpl: string;
-    constructor(itemHelper: ItemHelper, databaseServer: DatabaseServer, configServer: ConfigServer, itemFilterService: ItemFilterService, ragfairPriceService: RagfairPriceService, seasonalEventService: SeasonalEventService, weightedRandomHelper: WeightedRandomHelper);
+    constructor(itemHelper: ItemHelper, databaseService: DatabaseService, configServer: ConfigServer, itemFilterService: ItemFilterService, ragfairPriceService: RagfairPriceService, seasonalEventService: SeasonalEventService, weightedRandomHelper: WeightedRandomHelper);
     /**
      * Create an array of loot items a PMC can have in their pockets
      * @returns string array of tpls
@@ -42,6 +41,13 @@ export declare class PMCLootGenerator {
      * @returns true if it fits
      */
     protected itemFitsInto2By2Slot(item: ITemplateItem): boolean;
+    /**
+     * Check if item has a width/height that lets it fit into a 1x2 slot
+     * 1x1 / 1x2 / 2x1
+     * @param item Item to check size of
+     * @returns true if it fits
+     */
+    protected itemFitsInto1By2Slot(item: ITemplateItem): boolean;
     /**
      * Create an array of loot items a PMC can have in their backpack
      * @returns string array of tpls

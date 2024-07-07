@@ -8,7 +8,7 @@
 	"commonModExclusions": [
 		// SPT Installer
 		"BepInEx/plugins/spt",
-		"BepInEx/patchers/aki_PrePatch.dll",
+		"BepInEx/patchers/spt_PrePatch.dll",
 		// Questing Bots
 		"BepInEx/plugins/DanW-SPTQuestingBots/log",
 		// Realism

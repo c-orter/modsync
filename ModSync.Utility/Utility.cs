@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Aki.Common.Utils;
+using SPT.Common.Utils;
 
 namespace ModSync
 {

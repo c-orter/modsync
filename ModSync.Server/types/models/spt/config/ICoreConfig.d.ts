@@ -1,7 +1,7 @@
-import { IBaseConfig } from "@spt-aki/models/spt/config/IBaseConfig";
+import { IBaseConfig } from "@spt/models/spt/config/IBaseConfig";
 export interface ICoreConfig extends IBaseConfig {
-    kind: "aki-core";
-    akiVersion: string;
+    kind: "spt-core";
+    sptVersion: string;
     projectName: string;
     compatibleTarkovVersion: string;
     serverName: string;
@@ -16,6 +16,8 @@ export interface ICoreConfig extends IBaseConfig {
     commit?: string;
     /** Timestamp of server build */
     buildTime?: string;
+    /** Server locale keys that will be added to the bottom of the startup watermark */
+    customWatermarkLocaleKeys?: string[];
 }
 export interface IBsgLogging {
     /**
@@ -65,6 +67,7 @@ export interface IChatbotFeatures {
     sptFriendEnabled: boolean;
     commandoEnabled: boolean;
     commandoFeatures: ICommandoFeatures;
+    commandUseLimits: Record<string, number>;
 }
 export interface ICommandoFeatures {
     giveCommandEnabled: boolean;

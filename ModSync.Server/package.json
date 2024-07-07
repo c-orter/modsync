@@ -2,7 +2,7 @@
   "name": "Corter-ModSync",
   "version": "0.6.0",
   "main": "src/mod.js",
-  "akiVersion": "~3.8",
+  "sptVersion": "~3.9",
   "loadBefore": [],
   "loadAfter": [],
   "incompatibilities": [],

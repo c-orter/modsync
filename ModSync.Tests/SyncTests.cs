@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using Aki.Custom.Utils;
+using SPT.Custom.Utils;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ModSync.Tests

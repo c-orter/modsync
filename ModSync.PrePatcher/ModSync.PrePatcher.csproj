@@ -40,8 +40,8 @@
     <Reference Include="0Harmony20">
       <HintPath>..\..\BepInEx\core\0Harmony20.dll</HintPath>
     </Reference>
-    <Reference Include="Aki.Common">
-      <HintPath>..\..\EscapeFromTarkov_Data\Managed\Aki.Common.dll</HintPath>
+    <Reference Include="SPT.Common">
+      <HintPath>..\..\..\BepInEx\plugins\spt\spt-common.dll</HintPath>
     </Reference>
     <Reference Include="BepInEx">
       <HintPath>..\..\BepInEx\core\BepInEx.dll</HintPath>

@@ -5,8 +5,8 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Aki.Common.Http;
-using Aki.Common.Utils;
+using SPT.Common.Http;
+using SPT.Common.Utils;
 
 namespace ModSync
 {

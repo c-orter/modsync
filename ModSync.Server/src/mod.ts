@@ -5,27 +5,26 @@ import path from "node:path";
 import { lstatSync, watch } from "node:fs";
 import { readFile, lstat } from "node:fs/promises";
 import crc32 from "buffer-crc32";
-import type { IPreAkiLoadMod } from "@spt-aki/models/external/IPreAkiLoadMod";
-import type { ILogger } from "@spt-aki/models/spt/utils/ILogger";
-import type { HttpListenerModService } from "@spt-aki/services/mod/httpListener/HttpListenerModService";
-import type { HttpFileUtil } from "@spt-aki/utils/HttpFileUtil";
-import type { VFS } from "@spt-aki/utils/VFS";
-import type { JsonUtil } from "@spt-aki/utils/JsonUtil";
+import type { IPreSptLoadMod } from "@spt/models/external/IPreSptLoadMod";
+import type { ILogger } from "@spt/models/spt/utils/ILogger";
+import type { HttpListenerModService } from "@spt/services/mod/httpListener/HttpListenerModService";
+import type { HttpFileUtil } from "@spt/utils/HttpFileUtil";
+import type { VFS } from "@spt/utils/VFS";
+import type { JsonUtil } from "@spt/utils/JsonUtil";
 import { globRegex } from "./glob";
 
-type Config = { syncPaths: string[]; commonModExclusions: string[] };
 type ModFile = { crc: number };
 
-class Mod implements IPreAkiLoadMod {
+class Mod implements IPreSptLoadMod {
 	private static container: DependencyContainer;
 
 	private static loadFailed = false;
 	private static modFileHashes?: Record<string, ModFile>;
-	private static config: Config;
+	private static config: { syncPaths: string[]; commonModExclusions: string[] };
 	private static commonModExclusionsRegex: RegExp[];
 	private static syncPathsUpdated = false;
 
-	public preSptLoad(container: DependencyContainer): void {
+	public preAkiLoad(container: DependencyContainer): void {
 		Mod.container = container;
 		const logger = container.resolve<ILogger>("WinstonLogger");
 		const vfs = container.resolve<VFS>("VFS");
