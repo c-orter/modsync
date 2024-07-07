@@ -11,7 +11,7 @@ await $`mkdir -p ../dist/BepInEx/patchers`;
 await $`cp package.json ../dist/user/mods/corter-modsync/`;
 await $`cp src/* ../dist/user/mods/corter-modsync/src`;
 
-await $`dotnet build --configuration Release`.cwd("../ModSync/");
+await $`dotnet build --configuration Release`.cwd("../");
 await $`cp ../ModSync/bin/Release/Corter-ModSync.dll ../dist/BepInEx/plugins/`;
 await $`cp ../ModSync.PrePatcher/bin/Release/Corter-ModSync-Patcher.dll ../dist/BepInEx/patchers/`;
 

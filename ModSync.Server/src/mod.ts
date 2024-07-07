@@ -2,8 +2,8 @@ import type { DependencyContainer } from "tsyringe";
 
 import type { IncomingMessage, ServerResponse } from "node:http";
 import path from "node:path";
-import fs from "node:fs";
-import { readFile } from "node:fs/promises";
+import { lstatSync, watch } from "node:fs";
+import { readFile, lstat } from "node:fs/promises";
 import crc32 from "buffer-crc32";
 import type { IPreAkiLoadMod } from "@spt-aki/models/external/IPreAkiLoadMod";
 import type { ILogger } from "@spt-aki/models/spt/utils/ILogger";
@@ -74,12 +74,14 @@ class Mod implements IPreAkiLoadMod {
 				continue;
 			}
 
-			fs.watch(
+			watch(
 				syncPath,
 				{ recursive: true, persistent: false },
-				(e, filename) => {
+				async (e, filename) => {
+					if (e == "rename") return;
+					if (!filename) return;
+					if (!(await lstat(path.join(syncPath, filename))).isFile()) return;
 					if (
-						filename &&
 						Mod.commonModExclusionsRegex.some((exclusion) =>
 							exclusion.test(path.join(syncPath, filename)),
 						)
@@ -87,11 +89,11 @@ class Mod implements IPreAkiLoadMod {
 						return;
 
 					if (!Mod.syncPathsUpdated) {
-						logger.warning(
+						logger.info(
 							`Corter-ModSync: '${path.join(
 								syncPath,
-								filename ?? "",
-							)}' was changed while the server is running. If server mods were updated, those changes will not take effect until after the server is restarted.`,
+								filename,
+							)}' was changed while the server is running, the hash cache will be recomputed on next request.`,
 						);
 						Mod.syncPathsUpdated = true;
 					}
@@ -196,11 +198,11 @@ class Mod implements IPreAkiLoadMod {
 			};
 
 			const dirs = hashPaths.filter((syncPath) =>
-				fs.lstatSync(syncPath).isDirectory(),
+				lstatSync(syncPath).isDirectory(),
 			);
 
 			const files = hashPaths.filter((syncPath) =>
-				fs.lstatSync(syncPath).isFile(),
+				lstatSync(syncPath).isFile(),
 			);
 
 			return Object.fromEntries([
