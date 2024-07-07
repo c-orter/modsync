@@ -27,8 +27,7 @@ namespace ModSync
 
             return intersection
                 .Where((key) => !localModFiles[key].nosync)
-                .Where((key) => remoteModFiles[key].crc != localModFiles[key].crc)
-                .Where((key) => !previousRemoteModFiles.ContainsKey(key) || remoteModFiles[key].modified > previousRemoteModFiles[key].modified)
+                .Where((key) => previousRemoteModFiles.ContainsKey(key) && remoteModFiles[key].crc != previousRemoteModFiles[key].crc)
                 .ToList();
         }
 
@@ -65,14 +64,7 @@ namespace ModSync
             var data = VFS.ReadFile(file);
             var relativePath = file.Replace($"{basePath}\\", "");
 
-            return new KeyValuePair<string, ModFile>(
-                relativePath,
-                new ModFile(
-                    Crc32.Compute(data),
-                    ((DateTimeOffset)File.GetLastWriteTimeUtc(file)).ToUnixTimeMilliseconds(),
-                    Utility.NoSyncInTree(basePath, relativePath)
-                )
-            );
+            return new KeyValuePair<string, ModFile>(relativePath, new ModFile(Crc32.Compute(data), !enabled || Utility.NoSyncInTree(basePath, relativePath)));
         }
 
         public static void CompareModFiles(

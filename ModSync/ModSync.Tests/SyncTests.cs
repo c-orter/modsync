@@ -14,12 +14,12 @@ namespace ModSync
         [TestMethod]
         public void TestSingleAdded()
         {
-            var localModFiles = new Dictionary<string, ModFile>() { { "BepInEx\\plugins\\SAIN\\SAIN.dll", new(1234567, 1000000000000) } };
+            var localModFiles = new Dictionary<string, ModFile>() { { @"BepInEx\plugins\SAIN\SAIN.dll", new(1234567) } };
 
             var remoteModFiles = new Dictionary<string, ModFile>()
             {
-                { "BepInEx\\plugins\\SAIN\\SAIN.dll", new(1234567, 1000000000000) },
-                { "BepInEx\\plugins\\Corter-ModSync.dll", new(1234567, 1000000000000) },
+                { @"BepInEx\plugins\SAIN\SAIN.dll", new(1234567) },
+                { @"BepInEx\plugins\Corter-ModSync.dll", new(1234567) },
             };
 
             var addedFiles = Sync.GetAddedFiles(localModFiles, remoteModFiles);
@@ -30,9 +30,13 @@ namespace ModSync
         [TestMethod]
         public void TestOnlyModified()
         {
-            var localModFiles = new Dictionary<string, ModFile>() { { "BepInEx\\plugins\\SAIN\\SAIN.dll", new(1234567, 1000000000000) } };
+            var localModFiles = new Dictionary<string, ModFile>() { { @"BepInEx\plugins\SAIN\SAIN.dll", new(1234567) } };
 
-            var remoteModFiles = new Dictionary<string, ModFile>() { { "BepInEx\\plugins\\SAIN\\SAIN.dll", new(2345678, 1000000000001) } };
+            var remoteModFiles = new Dictionary<string, ModFile>()
+            {
+                { @"BepInEx\plugins\SAIN\SAIN.dll", new(1234567) },
+                { @"BepInEx\plugins\Corter-ModSync.dll", new(1234567) },
+            };
 
             var addedFiles = Sync.GetAddedFiles(localModFiles, remoteModFiles);
 
@@ -46,15 +50,15 @@ namespace ModSync
         [TestMethod]
         public void TestSingleAdded()
         {
-            var localModFiles = new Dictionary<string, ModFile>() { { "BepInEx\\plugins\\SAIN\\SAIN.dll", new(1234567, 1000000000000) } };
+            var localModFiles = new Dictionary<string, ModFile>() { { @"BepInEx\plugins\SAIN\SAIN.dll", new(1234567) } };
 
             var remoteModFiles = new Dictionary<string, ModFile>()
             {
-                { "BepInEx\\plugins\\SAIN\\SAIN.dll", new(1234567, 1000000000000) },
-                { "BepInEx\\plugins\\Corter-ModSync.dll", new(1234567, 1000000000000) },
+                { @"BepInEx\plugins\SAIN\SAIN.dll", new(1234567) },
+                { @"BepInEx\plugins\Corter-ModSync.dll", new(1234567) },
             };
 
-            var previousRemoteModFiles = new Dictionary<string, ModFile>() { { "BepInEx\\plugins\\SAIN\\SAIN.dll", new(1234567, 1000000000000) }, };
+            var previousRemoteModFiles = new Dictionary<string, ModFile>() { { @"BepInEx\plugins\SAIN\SAIN.dll", new(1234567) }, };
 
             var updatedFiles = Sync.GetUpdatedFiles(localModFiles, remoteModFiles, previousRemoteModFiles);
 
@@ -66,20 +70,20 @@ namespace ModSync
         {
             var localModFiles = new Dictionary<string, ModFile>()
             {
-                { "BepInEx\\plugins\\SAIN\\SAIN.dll", new(1234567, 1000000000000) },
-                { "BepInEx\\plugins\\Corter-ModSync.dll", new(1234567, 1000000000000) },
+                { @"BepInEx\plugins\SAIN\SAIN.dll", new(1234567) },
+                { @"BepInEx\plugins\Corter-ModSync.dll", new(1234567) },
             };
 
             var remoteModFiles = new Dictionary<string, ModFile>()
             {
-                { "BepInEx\\plugins\\SAIN\\SAIN.dll", new(1234567, 1000000000000) },
-                { "BepInEx\\plugins\\Corter-ModSync.dll", new(2345678, 1000000000001) },
+                { @"BepInEx\plugins\SAIN\SAIN.dll", new(1234567) },
+                { @"BepInEx\plugins\Corter-ModSync.dll", new(2345678) },
             };
 
             var previousRemoteModFiles = new Dictionary<string, ModFile>()
             {
-                { "BepInEx\\plugins\\SAIN\\SAIN.dll", new(1234567, 1000000000000) },
-                { "BepInEx\\plugins\\Corter-ModSync.dll", new(1234567, 1000000000000) },
+                { @"BepInEx\plugins\SAIN\SAIN.dll", new(1234567) },
+                { @"BepInEx\plugins\Corter-ModSync.dll", new(1234567) },
             };
 
             var updatedFiles = Sync.GetUpdatedFiles(localModFiles, remoteModFiles, previousRemoteModFiles);
@@ -92,20 +96,20 @@ namespace ModSync
         {
             var localModFiles = new Dictionary<string, ModFile>()
             {
-                { "BepInEx\\plugins\\SAIN\\SAIN.dll", new(1234567, 1000000000000) },
-                { "BepInEx\\plugins\\Corter-ModSync.dll", new(2345678, 1000000000000) },
+                { @"BepInEx\plugins\SAIN\SAIN.dll", new(1234567) },
+                { @"BepInEx\plugins\Corter-ModSync.dll", new(2345678) },
             };
 
             var remoteModFiles = new Dictionary<string, ModFile>()
             {
-                { "BepInEx\\plugins\\SAIN\\SAIN.dll", new(1234567, 1000000000000) },
-                { "BepInEx\\plugins\\Corter-ModSync.dll", new(1234567, 1000000000000) },
+                { @"BepInEx\plugins\SAIN\SAIN.dll", new(1234567) },
+                { @"BepInEx\plugins\Corter-ModSync.dll", new(1234567) },
             };
 
             var previousRemoteModFiles = new Dictionary<string, ModFile>()
             {
-                { "BepInEx\\plugins\\SAIN\\SAIN.dll", new(1234567, 1000000000000) },
-                { "BepInEx\\plugins\\Corter-ModSync.dll", new(1234567, 1000000000000) },
+                { @"BepInEx\plugins\SAIN\SAIN.dll", new(1234567) },
+                { @"BepInEx\plugins\Corter-ModSync.dll", new(1234567) },
             };
 
             var updatedFiles = Sync.GetUpdatedFiles(localModFiles, remoteModFiles, previousRemoteModFiles);
@@ -122,16 +126,16 @@ namespace ModSync
         {
             var localModFiles = new Dictionary<string, ModFile>()
             {
-                { "BepInEx\\plugins\\SAIN\\SAIN.dll", new(1234567, 1000000000000) },
-                { "BepInEx\\plugins\\Corter-ModSync.dll", new(1234567, 1000000000000) },
+                { @"BepInEx\plugins\SAIN\SAIN.dll", new(1234567) },
+                { @"BepInEx\plugins\Corter-ModSync.dll", new(1234567) },
             };
 
-            var remoteModFiles = new Dictionary<string, ModFile>() { { "BepInEx\\plugins\\SAIN\\SAIN.dll", new(1234567, 1000000000000) }, };
+            var remoteModFiles = new Dictionary<string, ModFile>() { { @"BepInEx\plugins\SAIN\SAIN.dll", new(1234567) }, };
 
             var previousRemoteModFiles = new Dictionary<string, ModFile>()
             {
-                { "BepInEx\\plugins\\SAIN\\SAIN.dll", new(1234567, 1000000000000) },
-                { "BepInEx\\plugins\\Corter-ModSync.dll", new(1234567, 1000000000000) },
+                { @"BepInEx\plugins\SAIN\SAIN.dll", new(1234567) },
+                { @"BepInEx\plugins\Corter-ModSync.dll", new(1234567) },
             };
 
             var removedFiles = Sync.GetRemovedFiles(localModFiles, remoteModFiles, previousRemoteModFiles);

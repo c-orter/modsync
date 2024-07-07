@@ -13,7 +13,7 @@ import type { VFS } from "@spt-aki/utils/VFS";
 import type { JsonUtil } from "@spt-aki/utils/JsonUtil";
 import { globRegex } from "./glob";
 
-type ModFile = { crc: number; modified: number };
+type ModFile = { crc: number };
 
 class Mod implements IPreAkiLoadMod {
 	private static container: DependencyContainer;
@@ -191,7 +191,6 @@ class Mod implements IPreAkiLoadMod {
 						.join(path.win32.sep),
 					{
 						crc: crc32.unsigned(await readFile(file)),
-						modified: await stat(file).then(({ mtimeMs }) => mtimeMs),
 					},
 				];
 			};
