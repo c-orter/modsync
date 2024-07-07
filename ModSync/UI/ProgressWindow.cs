@@ -22,8 +22,8 @@ namespace ModSync.UI
             float screenWidth = Screen.width;
             float screenHeight = Screen.height;
 
-            var windowWidth = 640f;
-            var windowHeight = 640f;
+            const float windowWidth = 640f;
+            const float windowHeight = 640f;
 
             GUILayout.BeginArea(new Rect((screenWidth - windowWidth) / 2f, (screenHeight - windowHeight) / 2f, windowWidth, windowHeight));
             GUILayout.BeginVertical();
@@ -57,13 +57,13 @@ namespace ModSync.UI
             GUILayout.EndArea();
         }
 
-        internal class ProgressBar() : Bordered
+        private class ProgressBar : Bordered
         {
-            private readonly int borderThickness = 2;
+            private const int borderThickness = 2;
 
             public void Draw(Vector2 size, int currentValue, int maxValue)
             {
-                Rect borderRect = GUILayoutUtility.GetRect(size.x, size.y);
+                var borderRect = GUILayoutUtility.GetRect(size.x, size.y);
                 DrawBorder(borderRect, borderThickness, Colors.Grey);
 
                 Rect progressRect =
@@ -75,7 +75,7 @@ namespace ModSync.UI
                     );
                 GUI.Box(progressRect, "");
 
-                float ratio = (float)currentValue / maxValue;
+                var ratio = (float)currentValue / maxValue;
                 Rect fillRect = new(progressRect.x, progressRect.y, progressRect.width * ratio, progressRect.height);
                 GUI.DrawTexture(fillRect, Utility.GetTexture(Colors.Red));
 
@@ -85,15 +85,15 @@ namespace ModSync.UI
         }
     }
 
-    internal class CancelButton() : Bordered
+    internal class CancelButton : Bordered
     {
-        private readonly int borderThickness = 2;
+        private const int borderThickness = 2;
 
-        private bool active = false;
+        private bool active;
 
         public bool Draw(Vector2 size)
         {
-            Rect borderRect = GUILayoutUtility.GetRect(size.x, size.y);
+            var borderRect = GUILayoutUtility.GetRect(size.x, size.y);
 
             Rect buttonRect =
                 new(

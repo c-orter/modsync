@@ -3,9 +3,9 @@ using UnityEngine;
 
 namespace ModSync.UI
 {
-    public class AlertWindow(string title, string message)
+    public class AlertWindow(string title, string message, string continueText = "CONTINUE", string cancelText = "CANCEL")
     {
-        private readonly AlertBox alertBox = new(title, message);
+        private readonly AlertBox alertBox = new(title, message, continueText, cancelText);
         public bool Active { get; private set; }
         public void Show() => Active = true;
 
@@ -37,16 +37,16 @@ namespace ModSync.UI
         }
     }
 
-    internal class AlertBox(string title, string message) : Bordered
+    internal class AlertBox(string title, string message, string continueText = "CONTINUE", string cancelText = "CANCEL") : Bordered
     {
-        private readonly AlertButton declineButton = new("CANCEL", Colors.Blue, Colors.BlueLighten, Colors.Grey, Colors.BlueDarken);
-        private readonly AlertButton acceptButton = new("CONTINUE", Colors.Red, Colors.RedLighten, Colors.Grey, Colors.RedDarken);
+        private readonly AlertButton acceptButton = new(continueText, Colors.Red, Colors.RedLighten, Colors.Grey, Colors.RedDarken);
+        private readonly AlertButton declineButton = new(cancelText, Colors.Blue, Colors.BlueLighten, Colors.Grey, Colors.BlueDarken);
 
         private readonly int borderThickness = 2;
 
         public void Draw(Vector2 size, Action onAccept, Action onDecline)
         {
-            Rect borderRect = GUILayoutUtility.GetRect(size.x, size.y);
+            var borderRect = GUILayoutUtility.GetRect(size.x, size.y);
             DrawBorder(borderRect, borderThickness, Colors.Grey);
 
             Rect alertRect =
@@ -86,18 +86,17 @@ namespace ModSync.UI
             Rect messageRect = new(infoRect.x, infoRect.y + infoRect.height / 2.5f, infoRect.width, infoRect.height / 2);
             GUI.Label(messageRect, message, messageStyle);
 
-            if (declineButton.Draw(new(actionsRect.x, actionsRect.y, actionsRect.width / 2, actionsRect.height)))
+            if (onDecline != null && declineButton.Draw(new(actionsRect.x, actionsRect.y, actionsRect.width / 2, actionsRect.height)))
                 onDecline();
-            if (acceptButton.Draw(new(actionsRect.x + actionsRect.width / 2, actionsRect.y, actionsRect.width / 2, actionsRect.height)))
+            if (onAccept != null && acceptButton.Draw(new(actionsRect.x + actionsRect.width / 2, actionsRect.y, actionsRect.width / 2, actionsRect.height)))
                 onAccept();
         }
     }
 
     internal class AlertButton(string text, Color normalColor, Color hoverColor, Color activeColor, Color borderColor) : Bordered
     {
-        private readonly string text = text;
-        private readonly int borderThickness = 2;
-        private bool active = false;
+        private const int borderThickness = 2;
+        private bool active;
 
         public bool Draw(Rect borderRect)
         {

@@ -4,7 +4,7 @@ namespace ModSync.UI
 {
     public class Bordered
     {
-        protected void DrawBorder(Rect rect, int thickness, Color color)
+        protected static void DrawBorder(Rect rect, int thickness, Color color)
         {
             var borderTexture = Utility.GetTexture(color);
             GUI.DrawTexture(new(rect.xMin, rect.yMin, rect.width, thickness), borderTexture); // Top

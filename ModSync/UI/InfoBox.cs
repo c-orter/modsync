@@ -4,14 +4,9 @@ namespace ModSync.UI
 {
     internal class InfoBox(string title, string message, int borderThickness = 2, bool transparent = false) : Bordered
     {
-        private readonly string title = title;
-        private readonly string message = message;
-        private readonly int borderThickness = borderThickness;
-        private readonly bool transparent = transparent;
-
         public void Draw(Vector2 size)
         {
-            Rect borderRect = GUILayoutUtility.GetRect(size.x, size.y);
+            var borderRect = GUILayoutUtility.GetRect(size.x, size.y);
             DrawBorder(borderRect, borderThickness, Colors.Grey);
 
             Rect infoRect =

@@ -122,13 +122,18 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Plugin.cs" />
-    <Compile Include="ModSync.GUI\*.cs" />
     <Compile Include="Server.cs" />
     <Compile Include="Sync.cs" />
+    <Compile Include="UI\AlertWindow.cs" />
+    <Compile Include="UI\Bordered.cs" />
+    <Compile Include="UI\Colors.cs" />
+    <Compile Include="UI\InfoBox.cs" />
+    <Compile Include="UI\ProgressWindow.cs" />
+    <Compile Include="UI\RestartWindow.cs" />
+    <Compile Include="UI\Utility.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
-    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="ModSync.Utility\ModSync.Utility.projitems" Label="Shared" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

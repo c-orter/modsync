@@ -1,5 +1,4 @@
 using System;
-using HarmonyLib;
 using UnityEngine;
 
 namespace ModSync.UI
@@ -50,15 +49,15 @@ namespace ModSync.UI
         }
     }
 
-    internal class RestartButton() : Bordered
+    internal class RestartButton : Bordered
     {
-        private readonly int borderThickness = 2;
+        private const int borderThickness = 2;
 
-        private bool active = false;
+        private bool active;
 
         public bool Draw(Vector2 size)
         {
-            Rect borderRect = GUILayoutUtility.GetRect(size.x, size.y);
+            var borderRect = GUILayoutUtility.GetRect(size.x, size.y);
 
             Rect buttonRect =
                 new(
