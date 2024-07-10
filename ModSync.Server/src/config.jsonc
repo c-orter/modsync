@@ -15,6 +15,14 @@
 		"user/mods/SPT-Realism/ProfileBackups",
 		// Fika
 		"user/mods/fika-server/types",
+		// Live Flea Prices
+		"user/mods/DrakiaXYZ-LiveFleaPrices/config",
+		// Questing Bots
+		"BepInEx/plugins/DanW-SPTQuestingBots/log",
+		// EFTApi
+		"BepInEx/plugins/kmyuhkyuk-EFTApi/cache",
+		// Expanded Task Text (Accounts for bug with current version)
+		"user/mods/ExpandedTaskText/src/*cache.json",
 		// General server mods
 		"user/mods/**/.git",
 		"user/mods/**/node_modules",
