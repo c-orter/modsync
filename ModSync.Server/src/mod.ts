@@ -25,7 +25,7 @@ class Mod implements IPreSptLoadMod {
 	private static commonModExclusionsRegex: RegExp[];
 	private static syncPathsUpdated = false;
 
-	public preAkiLoad(container: DependencyContainer): void {
+	public preSptLoad(container: DependencyContainer): void {
 		Mod.container = container;
 		const logger = container.resolve<ILogger>("WinstonLogger");
 		const vfs = container.resolve<VFS>("VFS");
