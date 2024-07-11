@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using SPT.Common.Utils;
 using BepInEx;
 using BepInEx.Bootstrap;
 using BepInEx.Configuration;
@@ -12,6 +11,7 @@ using BepInEx.Logging;
 using Comfort.Common;
 using EFT.UI;
 using ModSync.UI;
+using SPT.Common.Utils;
 using UnityEngine;
 
 namespace ModSync
@@ -236,7 +236,7 @@ namespace ModSync
             configDeleteRemovedFiles = Config.Bind(
                 "General",
                 "Delete Removed Files",
-                false,
+                true,
                 "Should the mod delete files that have been removed from the server?"
             );
 

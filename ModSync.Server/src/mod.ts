@@ -13,6 +13,7 @@ import type { VFS } from "@spt/utils/VFS";
 import type { JsonUtil } from "@spt/utils/JsonUtil";
 import { globRegex } from "./glob";
 
+type Config = { syncPaths: string[]; commonModExclusions: string[] };
 type ModFile = { crc: number };
 
 class Mod implements IPreSptLoadMod {
@@ -20,7 +21,7 @@ class Mod implements IPreSptLoadMod {
 
 	private static loadFailed = false;
 	private static modFileHashes?: Record<string, ModFile>;
-	private static config: { syncPaths: string[]; commonModExclusions: string[] };
+	private static config: Config;
 	private static commonModExclusionsRegex: RegExp[];
 	private static syncPathsUpdated = false;
 
