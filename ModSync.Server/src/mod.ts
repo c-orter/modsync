@@ -13,6 +13,7 @@ import type { VFS } from "@spt-aki/utils/VFS";
 import type { JsonUtil } from "@spt-aki/utils/JsonUtil";
 import { globRegex } from "./glob";
 
+type Config = { syncPaths: string[]; commonModExclusions: string[] };
 type ModFile = { crc: number };
 
 class Mod implements IPreAkiLoadMod {
@@ -20,11 +21,11 @@ class Mod implements IPreAkiLoadMod {
 
 	private static loadFailed = false;
 	private static modFileHashes?: Record<string, ModFile>;
-	private static config: { syncPaths: string[]; commonModExclusions: string[] };
+	private static config: Config;
 	private static commonModExclusionsRegex: RegExp[];
 	private static syncPathsUpdated = false;
 
-	public preAkiLoad(container: DependencyContainer): void {
+	public preSptLoad(container: DependencyContainer): void {
 		Mod.container = container;
 		const logger = container.resolve<ILogger>("WinstonLogger");
 		const vfs = container.resolve<VFS>("VFS");
@@ -38,10 +39,15 @@ class Mod implements IPreAkiLoadMod {
 			this.handleOverride,
 		);
 
+		if (!vfs.exists(path.join(__dirname, "config.jsonc")))
+			throw new Error(
+				"Corter-ModSync: config.jsonc does not exist. Please verify your config is correct and try again.",
+			);
+			
 		Mod.config = jsonUtil.deserializeJsonC(
 			vfs.readFile(path.join(__dirname, "config.jsonc")),
 			"config.jsonc",
-		);
+		) as Config;
 
 		if (
 			Mod.config.syncPaths === undefined ||
