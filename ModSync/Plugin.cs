@@ -40,7 +40,7 @@ namespace ModSync
         private readonly Server server = new();
         private CancellationTokenSource cts = new();
 
-        public static new readonly ManualLogSource Logger = BepInEx.Logging.Logger.CreateLogSource("ModSync");
+        public new static readonly ManualLogSource Logger = BepInEx.Logging.Logger.CreateLogSource("ModSync");
 
         private List<string> EnabledSyncPaths => syncPaths.Where((syncPath) => configSyncPathToggles[syncPath].Value).ToList();
 
@@ -283,8 +283,7 @@ namespace ModSync
                 if (Singleton<CommonUI>.Instantiated && Singleton<CommonUI>.Instance.gameObject.activeSelf)
                     Singleton<CommonUI>.Instance.gameObject.SetActive(false);
             }
-
-            if (pluginFinished)
+            else if (pluginFinished)
             {
                 pluginFinished = false;
                 if (Singleton<LoginUI>.Instantiated && !Singleton<LoginUI>.Instance.gameObject.activeSelf)

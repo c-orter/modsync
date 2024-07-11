@@ -41,8 +41,8 @@ namespace ModSync.UI
 
     internal class AlertBox(string title, string message, string continueText = "CONTINUE", string cancelText = "CANCEL") : Bordered
     {
-        private readonly AlertButton acceptButton = new(continueText, Colors.Red, Colors.RedLighten, Colors.Grey, Colors.RedDarken);
-        private readonly AlertButton declineButton = new(cancelText, Colors.Blue, Colors.BlueLighten, Colors.Grey, Colors.BlueDarken);
+        private readonly AlertButton acceptButton = new(continueText, Colors.Primary, Colors.PrimaryLight, Colors.Grey, Colors.PrimaryDark);
+        private readonly AlertButton declineButton = new(cancelText, Colors.Secondary, Colors.SecondaryLight, Colors.Grey, Colors.SecondaryDark);
 
         private readonly int borderThickness = 2;
 

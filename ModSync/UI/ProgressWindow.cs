@@ -77,7 +77,7 @@ namespace ModSync.UI
 
                 var ratio = (float)currentValue / maxValue;
                 Rect fillRect = new(progressRect.x, progressRect.y, progressRect.width * ratio, progressRect.height);
-                GUI.DrawTexture(fillRect, Utility.GetTexture(Colors.Red));
+                GUI.DrawTexture(fillRect, Utility.GetTexture(Colors.Primary));
 
                 GUIStyle style = new() { alignment = TextAnchor.MiddleCenter, normal = { textColor = Colors.White } };
                 GUI.Label(progressRect, $"{currentValue} / {maxValue} ({(float)currentValue / maxValue:P1})", style);
@@ -113,11 +113,11 @@ namespace ModSync.UI
             var buttonColor = active
                 ? Colors.Grey
                 : hovered
-                    ? Colors.RedLighten
-                    : Colors.Red;
+                    ? Colors.PrimaryLight
+                    : Colors.Primary;
             var textColor = active ? Colors.Dark : Colors.White;
 
-            DrawBorder(borderRect, borderThickness, Colors.RedDarken);
+            DrawBorder(borderRect, borderThickness, Colors.PrimaryDark);
             GUI.DrawTexture(buttonRect, Utility.GetTexture(buttonColor), ScaleMode.StretchToFill);
             return GUI.Button(
                 buttonRect,

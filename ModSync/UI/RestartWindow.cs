@@ -77,11 +77,11 @@ namespace ModSync.UI
             var buttonColor = active
                 ? Colors.Grey
                 : hovered
-                    ? Colors.RedLighten
-                    : Colors.Red;
+                    ? Colors.PrimaryLight
+                    : Colors.Primary;
             var textColor = active ? Colors.Dark : Colors.White;
 
-            DrawBorder(borderRect, borderThickness, Colors.RedDarken);
+            DrawBorder(borderRect, borderThickness, Colors.PrimaryDark);
             GUI.DrawTexture(buttonRect, Utility.GetTexture(buttonColor), ScaleMode.StretchToFill);
             return GUI.Button(
                 buttonRect,
