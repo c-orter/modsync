@@ -1,4 +1,12 @@
 ﻿<wpf:ResourceDictionary xml:space="preserve" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:s="clr-namespace:System;assembly=mscorlib" xmlns:ss="urn:shemas-jetbrains-com:settings-storage-xaml" xmlns:wpf="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
 	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=d99a1fe1_002D4564_002D468b_002D85b0_002D41f48aca5ad3/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="All tests from &amp;lt;ModSync.Tests&amp;gt;" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
-  &lt;Project Location="D:\TeSPT\Development\Corter-ModSync\ModSync.Tests" Presentation="&amp;lt;ModSync.Tests&amp;gt;" /&gt;&#xD;
+  &lt;TestAncestor&gt;&#xD;
+    &lt;TestId&gt;MSTest::ABCAD858-D5D2-4331-800F-4AEE9B339B52::.NETFramework,Version=v4.7.2::ModSync.Tests.IntegrationTests&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;MSTest::ABCAD858-D5D2-4331-800F-4AEE9B339B52::.NETFramework,Version=v4.7.2::ModSync.Tests.AddedFilesTests&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;MSTest::ABCAD858-D5D2-4331-800F-4AEE9B339B52::.NETFramework,Version=v4.7.2::ModSync.Tests.UpdatedFilesTests&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;MSTest::ABCAD858-D5D2-4331-800F-4AEE9B339B52::.NETFramework,Version=v4.7.2::ModSync.Tests.RemovedFilesTests&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;MSTest::ABCAD858-D5D2-4331-800F-4AEE9B339B52::.NETFramework,Version=v4.7.2::ModSync.Tests.HashLocalFilesTests&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;MSTest::ABCAD858-D5D2-4331-800F-4AEE9B339B52::.NETFramework,Version=v4.7.2::ModSync.Tests.CreateModFileTest&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;MSTest::ABCAD858-D5D2-4331-800F-4AEE9B339B52::.NETFramework,Version=v4.7.2::ModSync.Tests.NoSyncInTreeTest&lt;/TestId&gt;&#xD;
+  &lt;/TestAncestor&gt;&#xD;
 &lt;/SessionState&gt;</s:String></wpf:ResourceDictionary>
