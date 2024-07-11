@@ -40,7 +40,7 @@ namespace ModSync
         private readonly Server server = new();
         private CancellationTokenSource cts = new();
 
-        public new static readonly ManualLogSource Logger = BepInEx.Logging.Logger.CreateLogSource("ModSync");
+        public static new readonly ManualLogSource Logger = BepInEx.Logging.Logger.CreateLogSource("ModSync");
 
         private List<string> EnabledSyncPaths => syncPaths.Where((syncPath) => configSyncPathToggles[syncPath].Value).ToList();
 
@@ -62,18 +62,18 @@ namespace ModSync
                 removedFiles.Clear();
 
             if (UpdateCount > 0)
-                alertWindow.Show();
+                updateWindow.Show();
         }
 
         private void SkipUpdatingMods()
         {
             pluginFinished = true;
-            alertWindow.Hide();
+            updateWindow.Hide();
         }
 
         private async Task SyncMods()
         {
-            alertWindow.Hide();
+            updateWindow.Hide();
             downloadDir = Utility.GetTemporaryDirectory();
 
             downloadCount = 0;
@@ -213,14 +213,11 @@ namespace ModSync
             }
         }
 
-        private readonly AlertWindow alertWindow = new("Installed mods do not match server", "Would you like to update?");
-
+        private readonly UpdateWindow updateWindow = new("Installed mods do not match server", "Would you like to update?");
         private readonly ProgressWindow progressWindow = new("Downloading Updates...", "Your game will need to be restarted\nafter update completes.");
-
-        private readonly RestartWindow restartWindow = new("Update Complete.", "Please restart your game to continue.");
-
+        private readonly AlertWindow restartWindow = new(new(480f, 200f), "Update Complete.", "Please restart your game to continue.");
         private readonly AlertWindow downloadErrorWindow =
-            new("Download failed!", "There was an error updating mod files.\nPlease check BepInEx/LogOutput.log for more information.", "QUIT");
+            new(new(640f, 240f), "Download failed!", "There was an error updating mod files.\nPlease check BepInEx/LogOutput.log for more information.", "QUIT");
 
         private void Awake()
         {
@@ -266,13 +263,13 @@ namespace ModSync
 
             restartWindow.Draw(FinishUpdatingMods);
             progressWindow.Draw(downloadCount, UpdateCount, () => Task.Run(CancelUpdatingMods));
-            alertWindow.Draw(() => Task.Run(SyncMods), SkipUpdatingMods);
-            downloadErrorWindow.Draw(Application.Quit, null);
+            updateWindow.Draw(addedFiles, updatedFiles, configDeleteRemovedFiles.Value ? removedFiles : [], () => Task.Run(SyncMods), SkipUpdatingMods);
+            downloadErrorWindow.Draw(Application.Quit);
         }
 
         public void Update()
         {
-            if (alertWindow.Active || progressWindow.Active || restartWindow.Active || downloadErrorWindow.Active)
+            if (updateWindow.Active || progressWindow.Active || restartWindow.Active || downloadErrorWindow.Active)
             {
                 if (Singleton<LoginUI>.Instantiated && Singleton<LoginUI>.Instance.gameObject.activeSelf)
                     Singleton<LoginUI>.Instance.gameObject.SetActive(false);

@@ -123,7 +123,7 @@
     <Compile Include="UI\Colors.cs" />
     <Compile Include="UI\InfoBox.cs" />
     <Compile Include="UI\ProgressWindow.cs" />
-    <Compile Include="UI\RestartWindow.cs" />
+    <Compile Include="UI\UpdateWindow.cs" />
     <Compile Include="UI\Utility.cs" />
   </ItemGroup>
   <ItemGroup>
