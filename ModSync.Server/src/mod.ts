@@ -3,7 +3,7 @@ import type { DependencyContainer } from "tsyringe";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import path from "node:path";
 import { lstatSync, watch } from "node:fs";
-import { readFile, lstat } from "node:fs/promises";
+import { exists, readFile, lstat } from "node:fs/promises";
 import crc32 from "buffer-crc32";
 import type { IPreSptLoadMod } from "@spt/models/external/IPreSptLoadMod";
 import type { ILogger } from "@spt/models/spt/utils/ILogger";
@@ -11,7 +11,7 @@ import type { HttpListenerModService } from "@spt/services/mod/httpListener/Http
 import type { HttpFileUtil } from "@spt/utils/HttpFileUtil";
 import type { VFS } from "@spt/utils/VFS";
 import type { JsonUtil } from "@spt/utils/JsonUtil";
-import { globRegex } from "./glob";
+import { globNoEnd, globRegex } from "./glob";
 
 type Config = { syncPaths: string[]; commonModExclusions: string[] };
 type ModFile = { crc: number };
@@ -84,22 +84,28 @@ class Mod implements IPreSptLoadMod {
 				syncPath,
 				{ recursive: true, persistent: false },
 				async (e, filename) => {
-					if (e == "rename") return;
+					if (e === "rename") return;
 					if (!filename) return;
-					if (!(await lstat(path.join(syncPath, filename))).isFile()) return;
 					if (
-						Mod.commonModExclusionsRegex.some((exclusion) =>
-							exclusion.test(path.join(syncPath, filename)),
+						Mod.config.commonModExclusions.some((exclusion) =>
+							globNoEnd(exclusion).test(path.join(syncPath, filename)
+								.split(path.win32.sep)
+								.join(path.posix.sep))
 						)
 					)
 						return;
+					if (await exists(path.join(syncPath, filename)) && !(await lstat(path.join(syncPath, filename))).isFile()) return;
 
 					if (!Mod.syncPathsUpdated) {
+                        const updatedPath = path.join(
+                            syncPath,
+                            filename,
+                        )
+                            .split(path.win32.sep)
+							.join(path.posix.sep);
+                        
 						logger.info(
-							`Corter-ModSync: '${path.join(
-								syncPath,
-								filename,
-							)}' was changed while the server is running, the hash cache will be recomputed on next request.`,
+							`Corter-ModSync: '${updatedPath}' was changed while the server is running, the hash cache will be recomputed on next request.`,
 						);
 						Mod.syncPathsUpdated = true;
 					}
@@ -267,6 +273,7 @@ class Mod implements IPreSptLoadMod {
 				resp.setHeader("Content-Type", "application/json");
 				resp.writeHead(200, "OK");
 				resp.end(JSON.stringify(Mod.modFileHashes));
+			// biome-ignore lint/complexity/useOptionalChain: <explanation>
 			} else if (req.url && req.url.startsWith("/modsync/fetch/")) {
 				const filePath = decodeURIComponent(
 					// biome-ignore lint/style/noNonNullAssertion: <explanation>

@@ -31,27 +31,11 @@ await Bun.write(
 	),
 );
 
-const pluginAssemblyInfoString = await Bun.file(
-	"ModSync/Properties/AssemblyInfo.cs",
-).text();
-await Bun.write(
-	"ModSync/Properties/AssemblyInfo.cs",
-	pluginAssemblyInfoString
-		.replace(
-			`AssemblyVersion("${currentVersion}")`,
-			`AssemblyVersion("${newVersion}")`,
-		)
-		.replace(
-			`AssemblyFileVersion("${currentVersion}")`,
-			`AssemblyFileVersion("${newVersion}")`,
-		),
-);
-
 const patcherAssemblyInfoString = await Bun.file(
-	"ModSync/ModSync.PrePatcher/Properties/AssemblyInfo.cs",
+	"../ModSync.PrePatcher/Properties/AssemblyInfo.cs",
 ).text();
 await Bun.write(
-	"ModSync/ModSync.PrePatcher/Properties/AssemblyInfo.cs",
+	"../ModSync.PrePatcher/Properties/AssemblyInfo.cs",
 	patcherAssemblyInfoString
 		.replace(
 			`AssemblyVersion("${currentVersion}")`,
@@ -64,10 +48,10 @@ await Bun.write(
 );
 
 const testsAssemblyInfoString = await Bun.file(
-	"ModSync/ModSync.Tests/Properties/AssemblyInfo.cs",
+	"../ModSync.Tests/Properties/AssemblyInfo.cs",
 ).text();
 await Bun.write(
-	"ModSync/ModSync.Tests/Properties/AssemblyInfo.cs",
+	"../ModSync.Tests/Properties/AssemblyInfo.cs",
 	testsAssemblyInfoString
 		.replace(
 			`AssemblyVersion("${currentVersion}")`,
@@ -79,10 +63,10 @@ await Bun.write(
 		),
 );
 
-const PluginCsString = await Bun.file("ModSync/Plugin.cs").text();
+const PluginCsString = await Bun.file("../ModSync/Plugin.cs").text();
 
 await Bun.write(
-	"ModSync/Plugin.cs",
+	"../ModSync/Plugin.cs",
 	PluginCsString.replace(
 		`BepInPlugin("corter.modsync", "Corter ModSync", "${currentVersion}")`,
 		`BepInPlugin("corter.modsync", "Corter ModSync", "${newVersion}")`,

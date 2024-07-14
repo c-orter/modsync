@@ -32,3 +32,7 @@ function join(globs: string[]) {
 export function globRegex(glob: string | string[]) {
 	return new RegExp(`^${Array.isArray(glob) ? join(glob) : replace(glob)}$`);
 }
+
+export function globNoEnd(glob: string | string[]) {
+	return new RegExp(`^${Array.isArray(glob) ? join(glob) : replace(glob)}`);
+}
