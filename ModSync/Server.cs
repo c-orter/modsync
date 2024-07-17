@@ -19,10 +19,7 @@ namespace ModSync
 
             var downloadPath = Path.Combine(downloadDir, file);
             VFS.CreateDirectory(downloadPath.GetDirectory());
-
-            if (file == @"BepInEx\patchers\Corter-ModSync-Patcher.dll")
-                downloadPath = Path.Combine(Directory.GetCurrentDirectory(), @"BepInEx\patchers\Corter-ModSync-Patcher.dll");
-
+            
             try
             {
                 await limiter.WaitAsync(cancellationToken);

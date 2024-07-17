@@ -9,6 +9,8 @@
 		// SPT Installer
 		"BepInEx/plugins/spt",
 		"BepInEx/patchers/spt-prepatch.dll",
+		// Corter-ModSync
+		"BepInEx/patchers/Corter-ModSync-Patcher.dll",
 		// Questing Bots
 		"BepInEx/plugins/DanW-SPTQuestingBots/log",
 		// Realism
