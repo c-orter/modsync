@@ -3,7 +3,6 @@ import type { DependencyContainer } from "tsyringe";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import path from "node:path";
 import { lstatSync, watch } from "node:fs";
-import { readFile, lstat } from "node:fs/promises";
 import crc32 from "buffer-crc32";
 import type { IPreAkiLoadMod } from "@spt-aki/models/external/IPreAkiLoadMod";
 import type { ILogger } from "@spt-aki/models/spt/utils/ILogger";
@@ -84,22 +83,28 @@ class Mod implements IPreAkiLoadMod {
 				syncPath,
 				{ recursive: true, persistent: false },
 				async (e, filename) => {
-					if (e == "rename") return;
+					if (e === "rename") return;
 					if (!filename) return;
-					if (!(await lstat(path.join(syncPath, filename))).isFile()) return;
 					if (
-						Mod.commonModExclusionsRegex.some((exclusion) =>
-							exclusion.test(path.join(syncPath, filename)),
+						Mod.config.commonModExclusions.some((exclusion) =>
+							globNoEnd(exclusion).test(path.join(syncPath, filename)
+								.split(path.win32.sep)
+								.join(path.posix.sep))
 						)
 					)
 						return;
+					if (vfs.exists(path.join(syncPath, filename)) && !lstatSync(path.join(syncPath, filename)).isFile()) return;
 
 					if (!Mod.syncPathsUpdated) {
+                        const updatedPath = path.join(
+                            syncPath,
+                            filename,
+                        )
+                            .split(path.win32.sep)
+							.join(path.posix.sep);
+                        
 						logger.info(
-							`Corter-ModSync: '${path.join(
-								syncPath,
-								filename,
-							)}' was changed while the server is running, the hash cache will be recomputed on next request.`,
+							`Corter-ModSync: '${updatedPath}' was changed while the server is running, the hash cache will be recomputed on next request.`,
 						);
 						Mod.syncPathsUpdated = true;
 					}
@@ -198,7 +203,7 @@ class Mod implements IPreAkiLoadMod {
 						.split(path.sep)
 						.join(path.win32.sep),
 					{
-						crc: crc32.unsigned(await readFile(file)),
+						crc: crc32.unsigned(vfs.readFile(file)),
 					},
 				];
 			};
@@ -267,6 +272,7 @@ class Mod implements IPreAkiLoadMod {
 				resp.setHeader("Content-Type", "application/json");
 				resp.writeHead(200, "OK");
 				resp.end(JSON.stringify(Mod.modFileHashes));
+			// biome-ignore lint/complexity/useOptionalChain: <explanation>
 			} else if (req.url && req.url.startsWith("/modsync/fetch/")) {
 				const filePath = decodeURIComponent(
 					// biome-ignore lint/style/noNonNullAssertion: <explanation>
