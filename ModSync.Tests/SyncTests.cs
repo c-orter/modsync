@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using SPT.Custom.Utils;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using SPT.Custom.Utils;
 
 namespace ModSync.Tests
 {
@@ -115,6 +115,30 @@ namespace ModSync.Tests
             var updatedFiles = Sync.GetUpdatedFiles(localModFiles, remoteModFiles, previousRemoteModFiles);
 
             Assert.AreEqual(0, updatedFiles.Count);
+        }
+
+        [TestMethod]
+        public void TestFilesExistButPreviousEmpty()
+        {
+            var localModFiles = new Dictionary<string, ModFile>()
+            {
+                { @"BepInEx\plugins\SAIN\SAIN.dll", new(1234567) },
+                { @"BepInEx\plugins\Corter-ModSync.dll", new(1234567) },
+            };
+
+            var remoteModFiles = new Dictionary<string, ModFile>()
+            {
+                { @"BepInEx\plugins\SAIN\SAIN.dll", new(1234567) },
+                { @"BepInEx\plugins\Corter-ModSync.dll", new(2345678) },
+                { @"BepInEx\plugins\New-Mod.dll", new(1234567) },
+            };
+
+            var previousRemoteModFiles = new Dictionary<string, ModFile>();
+
+            var updatedFiles = Sync.GetUpdatedFiles(localModFiles, remoteModFiles, previousRemoteModFiles);
+
+            Assert.AreEqual(1, updatedFiles.Count);
+            Assert.AreEqual(@"BepInEx\plugins\Corter-ModSync.dll", updatedFiles[0]);
         }
     }
 

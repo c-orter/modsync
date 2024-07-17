@@ -27,9 +27,11 @@ namespace ModSync
 
             return intersection
                 .Where((key) => !localModFiles[key].nosync)
-                .Where(previousRemoteModFiles.ContainsKey)
-                .Where((key) => remoteModFiles[key].crc != previousRemoteModFiles[key].crc)
-                .Where((key) => remoteModFiles[key].crc != localModFiles[key].crc)
+                .Where(
+                    (key) =>
+                        (!previousRemoteModFiles.ContainsKey(key) || remoteModFiles[key].crc != previousRemoteModFiles[key].crc)
+                        && remoteModFiles[key].crc != localModFiles[key].crc
+                )
                 .ToList();
         }
 

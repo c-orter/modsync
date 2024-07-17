@@ -40,7 +40,7 @@ namespace ModSync
         private readonly Server server = new();
         private CancellationTokenSource cts = new();
 
-        public static new readonly ManualLogSource Logger = BepInEx.Logging.Logger.CreateLogSource("ModSync");
+        public new static readonly ManualLogSource Logger = BepInEx.Logging.Logger.CreateLogSource("ModSync");
 
         private List<string> EnabledSyncPaths => syncPaths.Where((syncPath) => configSyncPathToggles[syncPath].Value).ToList();
 
@@ -63,6 +63,8 @@ namespace ModSync
 
             if (UpdateCount > 0)
                 updateWindow.Show();
+            else
+                WriteModSyncFile();
         }
 
         private void SkipUpdatingMods()
@@ -123,7 +125,7 @@ namespace ModSync
             pluginFinished = true;
         }
 
-        private void FinishUpdatingMods()
+        private void WriteModSyncFile()
         {
             Persist newPersist =
                 new()
@@ -134,6 +136,11 @@ namespace ModSync
                 };
 
             VFS.WriteTextFile(Path.Combine(Directory.GetCurrentDirectory(), ".modsync"), Json.Serialize(newPersist));
+        }
+
+        private void FinishUpdatingMods()
+        {
+            WriteModSyncFile();
 
             Application.Quit();
         }
