@@ -4,3 +4,4 @@ dist
 */obj
 packages
 */.vs
+.idea
