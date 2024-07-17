@@ -10,7 +10,7 @@ import type { HttpListenerModService } from "@spt-aki/services/mod/httpListener/
 import type { HttpFileUtil } from "@spt-aki/utils/HttpFileUtil";
 import type { VFS } from "@spt-aki/utils/VFS";
 import type { JsonUtil } from "@spt-aki/utils/JsonUtil";
-import { globRegex } from "./glob";
+import { globNoEnd, globRegex } from "./glob";
 
 type Config = { syncPaths: string[]; commonModExclusions: string[] };
 type ModFile = { crc: number };
