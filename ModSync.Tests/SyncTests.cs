@@ -116,6 +116,30 @@ namespace ModSync.Tests
 
             Assert.AreEqual(0, updatedFiles.Count);
         }
+
+        [TestMethod]
+        public void TestFilesExistButPreviousEmpty()
+        {
+            var localModFiles = new Dictionary<string, ModFile>()
+            {
+                { @"BepInEx\plugins\SAIN\SAIN.dll", new(1234567) },
+                { @"BepInEx\plugins\Corter-ModSync.dll", new(1234567) },
+            };
+
+            var remoteModFiles = new Dictionary<string, ModFile>()
+            {
+                { @"BepInEx\plugins\SAIN\SAIN.dll", new(1234567) },
+                { @"BepInEx\plugins\Corter-ModSync.dll", new(2345678) },
+                { @"BepInEx\plugins\New-Mod.dll", new(1234567) },
+            };
+
+            var previousRemoteModFiles = new Dictionary<string, ModFile>();
+
+            var updatedFiles = Sync.GetUpdatedFiles(localModFiles, remoteModFiles, previousRemoteModFiles);
+
+            Assert.AreEqual(1, updatedFiles.Count);
+            Assert.AreEqual(@"BepInEx\plugins\Corter-ModSync.dll", updatedFiles[0]);
+        }
     }
 
     [TestClass]
