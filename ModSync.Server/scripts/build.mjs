@@ -15,10 +15,10 @@ await $`dotnet build --configuration Release`.cwd("../");
 await $`cp ../ModSync/bin/Release/Corter-ModSync.dll ../dist/BepInEx/plugins/`;
 await $`cp ../ModSync.PrePatcher/bin/Release/Corter-ModSync-Patcher.dll ../dist/BepInEx/patchers/`;
 
-await $`7z a -tzip corter-modsync-server-${packageJson.version}.zip user/`
+await $`7z a -tzip Corter-ModSync-Server-v${packageJson.version}.zip user/`
 	.cwd("../dist/")
 	.quiet();
 
-await $`7z a -tzip corter-modsync-client-${packageJson.version}.zip BepInEx/`
+await $`7z a -tzip Corter-ModSync-Client-v${packageJson.version}.zip BepInEx/`
 	.cwd("../dist/")
 	.quiet();
