@@ -3,7 +3,6 @@ import type { DependencyContainer } from "tsyringe";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import path from "node:path";
 import { lstatSync, watch } from "node:fs";
-import { exists, readFile, lstat } from "node:fs/promises";
 import crc32 from "buffer-crc32";
 import type { IPreSptLoadMod } from "@spt/models/external/IPreSptLoadMod";
 import type { ILogger } from "@spt/models/spt/utils/ILogger";
@@ -94,7 +93,7 @@ class Mod implements IPreSptLoadMod {
 						)
 					)
 						return;
-					if (await exists(path.join(syncPath, filename)) && !(await lstat(path.join(syncPath, filename))).isFile()) return;
+					if (vfs.exists(path.join(syncPath, filename)) && !lstatSync(path.join(syncPath, filename)).isFile()) return;
 
 					if (!Mod.syncPathsUpdated) {
                         const updatedPath = path.join(
@@ -204,7 +203,7 @@ class Mod implements IPreSptLoadMod {
 						.split(path.sep)
 						.join(path.win32.sep),
 					{
-						crc: crc32.unsigned(await readFile(file)),
+						crc: crc32.unsigned(vfs.readFile(file)),
 					},
 				];
 			};
