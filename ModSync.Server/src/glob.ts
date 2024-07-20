@@ -1,4 +1,5 @@
 // Full Credit to https://github.com/aleclarson/glob-regex
+// Copyright (c) 2016 Alec Larson
 
 const dotRE = /\./g;
 const dotPattern = "\\.";
@@ -29,7 +30,7 @@ function join(globs: string[]) {
 	return `((${globs.map(replace).join(")|(")}))`;
 }
 
-export function globRegex(glob: string | string[]) {
+export function glob(glob: string | string[]) {
 	return new RegExp(`^${Array.isArray(glob) ? join(glob) : replace(glob)}$`);
 }
 
