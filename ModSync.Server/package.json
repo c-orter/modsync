@@ -1,32 +1,40 @@
 {
-  "name": "Corter-ModSync",
-  "version": "0.6.2",
-  "main": "src/mod.js",
-  "sptVersion": "~3.9",
-  "loadBefore": [],
-  "loadAfter": [],
-  "incompatibilities": [],
-  "contributors": [],
-  "isBundleMod": false,
-  "scripts": {
-    "setup": "npm i",
-    "build": "bun scripts/build.mjs",
-    "bump-version": "bun scripts/bump-version.mjs"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "1.7.3",
-    "@types/bun": "^1.1.3",
-    "@types/node": "20.11",
-    "@typescript-eslint/eslint-plugin": "7.2",
-    "@typescript-eslint/parser": "7.2",
-    "fs-extra": "11.2",
-    "ignore": "^5.2",
-    "semver": "^7.6.2",
-    "tsyringe": "4.8.0",
-    "typescript": "5.5.2",
-    "winston": "3.12"
-  },
-  "author": "Corter",
-  "license": "MIT",
-  "dependencies": { "buffer-crc32": "^1.0.0" }
+	"name": "Corter-ModSync",
+	"version": "0.7.0",
+	"main": "src/mod.js",
+	"sptVersion": "~3.9",
+	"loadBefore": [],
+	"loadAfter": [],
+	"incompatibilities": [],
+	"contributors": [],
+	"isBundleMod": false,
+	"scripts": {
+		"setup": "npm i",
+		"build": "node scripts/build.cjs",
+		"bump-version": "node scripts/bump-version.cjs"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "1.7.3",
+		"@types/bun": "^1.1.3",
+		"@types/node": "20.11",
+		"@types/shelljs": "^0.8.15",
+		"@typescript-eslint/eslint-plugin": "7.2",
+		"@typescript-eslint/parser": "7.2",
+		"@vitest/coverage-v8": "^2.0.3",
+		"fs-extra": "11.2",
+		"ignore": "^5.2",
+		"memfs": "^4.9.3",
+		"semver": "^7.6.2",
+		"shelljs": "^0.8.5",
+		"tsyringe": "4.8.0",
+		"typescript": "5.5.2",
+		"vitest": "^2.0.3",
+		"vitest-mock-extended": "^1.3.2",
+		"winston": "3.12"
+	},
+	"author": "Corter",
+	"license": "MIT",
+	"dependencies": {
+		"buffer-crc32": "^1.0.0"
+	}
 }

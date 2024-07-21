@@ -1,20 +1,20 @@
 {
-    "compilerOptions": {
-        "allowJs": true,
-        "module": "NodeNext",
-        "target": "ES2022",
-        "moduleResolution": "NodeNext",
-        "esModuleInterop": true,
-        "downlevelIteration": true,
-        "experimentalDecorators": true,
-        "emitDecoratorMetadata": true,
-        "resolveJsonModule": true,
-        "outDir": "tmp",
-        "strict": true,
-        "paths": {
-            "@spt/*": ["./types/*"],
-        },
-        "types": ["@types/bun"]
-    },
-    "exclude": ["node_modules", "dist", "tmp"],
+	"compilerOptions": {
+		"allowJs": true,
+		"module": "NodeNext",
+		"target": "ES2022",
+		"moduleResolution": "NodeNext",
+		"esModuleInterop": true,
+		"downlevelIteration": true,
+		"experimentalDecorators": true,
+		"emitDecoratorMetadata": true,
+		"resolveJsonModule": true,
+		"outDir": "tmp",
+		"strict": true,
+		"paths": {
+			"@spt/*": ["./types/*"]
+		},
+		"types": ["@types/bun", "vitest"]
+	},
+	"exclude": ["node_modules", "dist", "tmp"]
 }
