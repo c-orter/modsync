@@ -40,7 +40,7 @@ namespace ModSync
         private readonly Server server = new();
         private CancellationTokenSource cts = new();
 
-        public new static readonly ManualLogSource Logger = BepInEx.Logging.Logger.CreateLogSource("ModSync");
+        public static new readonly ManualLogSource Logger = BepInEx.Logging.Logger.CreateLogSource("ModSync");
 
         private List<string> EnabledSyncPaths => syncPaths.Where((syncPath) => configSyncPathToggles[syncPath].Value).ToList();
 
@@ -81,7 +81,7 @@ namespace ModSync
             downloadCount = 0;
             progressWindow.Show();
 
-            var limiter = new SemaphoreSlim(32, maxCount: 32);
+            var limiter = new SemaphoreSlim(Environment.ProcessorCount, maxCount: Environment.ProcessorCount);
 
             downloadTasks = addedFiles.Union(updatedFiles).Select((file) => server.DownloadFile(file, downloadDir, limiter, cts.Token)).ToList();
 
@@ -224,7 +224,12 @@ namespace ModSync
         private readonly ProgressWindow progressWindow = new("Downloading Updates...", "Your game will need to be restarted\nafter update completes.");
         private readonly AlertWindow restartWindow = new(new(480f, 200f), "Update Complete.", "Please restart your game to continue.");
         private readonly AlertWindow downloadErrorWindow =
-            new(new(640f, 240f), "Download failed!", "There was an error updating mod files.\nPlease check BepInEx/LogOutput.log for more information.", "QUIT");
+            new(
+                new(640f, 240f),
+                "Download failed!",
+                "There was an error updating mod files.\nPlease check BepInEx/LogOutput.log for more information.",
+                "QUIT"
+            );
 
         private void Awake()
         {

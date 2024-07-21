@@ -19,7 +19,7 @@ namespace ModSync
 
             var downloadPath = Path.Combine(downloadDir, file);
             VFS.CreateDirectory(downloadPath.GetDirectory());
-            
+
             try
             {
                 await limiter.WaitAsync(cancellationToken);
