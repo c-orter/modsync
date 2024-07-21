@@ -42,6 +42,18 @@ namespace ModSync.Tests
 
             CollectionAssert.AreEqual(new List<string>() { @"BepInEx\plugins\Corter-ModSync.dll" }, addedFiles);
         }
+
+        [TestMethod]
+        public void TestNoneAdded()
+        {
+            var localModFiles = new Dictionary<string, ModFile>() { { @"BepInEx\plugins\SAIN\SAIN.dll", new(1234567) } };
+
+            var remoteModFiles = new Dictionary<string, ModFile>() { { @"BepInEx\plugins\SAIN\SAIN.dll", new(1234567) }, };
+
+            var addedFiles = Sync.GetAddedFiles(localModFiles, remoteModFiles);
+
+            Assert.AreEqual(0, addedFiles.Count);
+        }
     }
 
     [TestClass]
@@ -139,6 +151,32 @@ namespace ModSync.Tests
 
             Assert.AreEqual(1, updatedFiles.Count);
             Assert.AreEqual(@"BepInEx\plugins\Corter-ModSync.dll", updatedFiles[0]);
+        }
+
+        [TestMethod]
+        public void TestBothUpdated()
+        {
+            var localModFiles = new Dictionary<string, ModFile>()
+            {
+                { @"BepInEx\plugins\SAIN\SAIN.dll", new(1234567) },
+                { @"BepInEx\plugins\Corter-ModSync.dll", new(2345678) },
+            };
+
+            var remoteModFiles = new Dictionary<string, ModFile>()
+            {
+                { @"BepInEx\plugins\SAIN\SAIN.dll", new(1234567) },
+                { @"BepInEx\plugins\Corter-ModSync.dll", new(2345678) },
+            };
+
+            var previousRemoteModFiles = new Dictionary<string, ModFile>()
+            {
+                { @"BepInEx\plugins\SAIN\SAIN.dll", new(1234567) },
+                { @"BepInEx\plugins\Corter-ModSync.dll", new(1234567) },
+            };
+            
+            var updatedFiles = Sync.GetUpdatedFiles(localModFiles, remoteModFiles, previousRemoteModFiles);
+
+            Assert.AreEqual(0, updatedFiles.Count);
         }
     }
 
