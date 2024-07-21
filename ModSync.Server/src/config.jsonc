@@ -3,7 +3,10 @@
 		"BepInEx/plugins",
 		"BepInEx/patchers",
 		"BepInEx/config",
-		"user/mods"
+		{
+			"enabled": false,
+			"path": "user/mods"
+		}
 	],
 	"commonModExclusions": [
 		// SPT Installer
