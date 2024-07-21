@@ -1,18 +1,18 @@
 using System.Reflection;
 using System.Runtime.InteropServices;
 
-[assembly: AssemblyTitle("ModSync.Tests")]
+[assembly: AssemblyTitle("ModSync")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("ModSync.Tests")]
+[assembly: AssemblyProduct("ModSync")]
 [assembly: AssemblyCopyright("Copyright ©  2024")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
 [assembly: ComVisible(false)]
 
-[assembly: Guid("abcad858-d5d2-4331-800f-4aee9b339b52")]
+[assembly: Guid("6337fafc-25ba-4062-b61c-12a614297ae5")]
 
 [assembly: AssemblyVersion("0.7.0")]
 [assembly: AssemblyFileVersion("0.7.0")]
