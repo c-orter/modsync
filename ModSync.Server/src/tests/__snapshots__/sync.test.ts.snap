@@ -1,0 +1,40 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`hashModFiles > should correctly hash folders that didn't exist initially but are created 1`] = `
+{
+  "plugins\\OtherMod\\other_mod.dll": {
+    "crc": 2471037616,
+  },
+  "plugins\\file1.dll": {
+    "crc": 1338358949,
+  },
+  "user\\bananas\\test.txt": {
+    "crc": 3632233996,
+  },
+}
+`;
+
+exports[`hashModFiles > should correctly hash multiple folders 1`] = `
+{
+  "plugins\\OtherMod\\other_mod.dll": {
+    "crc": 2471037616,
+  },
+  "plugins\\file1.dll": {
+    "crc": 1338358949,
+  },
+  "user\\mods\\testMod\\test.ts": {
+    "crc": 171989770,
+  },
+}
+`;
+
+exports[`hashModFiles > should hash mod files 1`] = `
+{
+  "plugins\\OtherMod\\other_mod.dll": {
+    "crc": 2471037616,
+  },
+  "plugins\\file1.dll": {
+    "crc": 1338358949,
+  },
+}
+`;
