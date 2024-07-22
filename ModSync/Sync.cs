@@ -57,6 +57,7 @@ namespace ModSync
                         Utility
                             .GetFilesInDir(path)
                             .AsParallel()
+                            .Where((file) => file != @"BepInEx\patchers\Corter-ModSync-Patcher.dll")
                             .Where((file) => !file.EndsWith(".nosync") && !file.EndsWith(".nosync.txt"))
                             .Select((file) => CreateModFile(basePath, file, enabledSyncPaths.Contains(path.Remove(0, basePath.Length + 1))))
                 )
