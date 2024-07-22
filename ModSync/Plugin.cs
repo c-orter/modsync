@@ -81,7 +81,7 @@ namespace ModSync
             downloadCount = 0;
             progressWindow.Show();
 
-            var limiter = new SemaphoreSlim(Environment.ProcessorCount, maxCount: Environment.ProcessorCount);
+            var limiter = new SemaphoreSlim(8, maxCount: 8);
 
             downloadTasks = addedFiles.Union(updatedFiles).Select((file) => server.DownloadFile(file, downloadDir, limiter, cts.Token)).ToList();
 
@@ -93,7 +93,7 @@ namespace ModSync
                 {
                     await task;
                 }
-                catch (TaskCanceledException) { }
+                catch (OperationCanceledException) { }
                 catch
                 {
                     cts.Cancel();
@@ -274,7 +274,7 @@ namespace ModSync
                 return;
 
             restartWindow.Draw(FinishUpdatingMods);
-            progressWindow.Draw(downloadCount, UpdateCount, () => Task.Run(CancelUpdatingMods));
+            progressWindow.Draw(downloadCount, addedFiles.Count + updatedFiles.Count, () => Task.Run(CancelUpdatingMods));
             updateWindow.Draw(addedFiles, updatedFiles, configDeleteRemovedFiles.Value ? removedFiles : [], () => Task.Run(SyncMods), SkipUpdatingMods);
             downloadErrorWindow.Draw(Application.Quit);
         }

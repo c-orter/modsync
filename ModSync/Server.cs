@@ -20,25 +20,42 @@ namespace ModSync
             var downloadPath = Path.Combine(downloadDir, file);
             VFS.CreateDirectory(downloadPath.GetDirectory());
 
-            try
-            {
-                await limiter.WaitAsync(cancellationToken);
-                using var client = new HttpClient();
-                using var fileStream = new FileStream(downloadPath, FileMode.CreateNew);
-                using var responseStream = await client.GetStreamAsync($@"{RequestHandler.Host}/modsync/fetch/{file}");
+            var retryCount = 0;
 
-                await responseStream.CopyToAsync(fileStream, (int)responseStream.Length, cancellationToken);
-                limiter.Release();
-            }
-            catch (TaskCanceledException)
+            while (retryCount < 5 && !cancellationToken.IsCancellationRequested)
             {
-                throw;
-            }
-            catch (Exception e)
-            {
-                Plugin.Logger.LogError($"Failed to download '{file}'. Please see the stacktrace below for details.");
-                Plugin.Logger.LogError(e);
-                throw;
+                try
+                {
+                    await limiter.WaitAsync(cancellationToken);
+                    using var client = new HttpClient();
+                    client.Timeout = TimeSpan.FromMinutes(5);
+                    using var fileStream = new FileStream(downloadPath, FileMode.Create);
+                    using var responseStream = await client.GetStreamAsync($@"{RequestHandler.Host}/modsync/fetch/{file}");
+
+                    await responseStream.CopyToAsync(fileStream, (int)responseStream.Length, cancellationToken);
+                    limiter.Release();
+                    return;
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception e)
+                {
+                    if (retryCount < 4)
+                    {
+                        Plugin.Logger.LogError($"Failed to download '{file}'. Retrying...");
+                        Plugin.Logger.LogError(e);
+                        await Task.Delay(500, cancellationToken);
+                        retryCount++;
+                    }
+                    else
+                    {
+                        Plugin.Logger.LogError($"Failed to download '{file}'. Exiting...");
+                        Plugin.Logger.LogError(e);
+                        throw;
+                    }
+                }
             }
         }
 
