@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace ModSync
@@ -10,8 +11,11 @@ namespace ModSync
 
     public class Persist
     {
+        public const int LATEST_VERSION = 7;
+
         public Dictionary<string, ModFile> previousSync = [];
         public string downloadDir = string.Empty;
         public List<string> filesToDelete = [];
+        public int version = 0;
     }
 }

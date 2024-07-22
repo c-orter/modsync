@@ -253,6 +253,15 @@ namespace ModSync
             try
             {
                 persist = VFS.Exists(persistPath) ? Json.Deserialize<Persist>(File.ReadAllText(persistPath)) : new();
+                if (persist.version < Persist.LATEST_VERSION)
+                {
+                    Logger.LogInfo(".modsync file format has been updated. Removing old file...");
+                    persist = new Persist
+                    {
+                        version = Persist.LATEST_VERSION
+                    };
+                }
+                
                 persist.previousSync = persist.previousSync.ToDictionary(item => item.Key, item => item.Value, StringComparer.OrdinalIgnoreCase);
             }
             catch (Exception e)
