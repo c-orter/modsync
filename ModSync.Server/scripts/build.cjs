@@ -2,11 +2,11 @@
 const packageJson = require("../package.json");
 
 rm("-rf", "../dist");
-mkdir("-p", "../dist/user/mods/corter-modsync/src");
+mkdir("-p", "../dist/user/mods/Corter-ModSync/src");
 mkdir("-p", "../dist/BepInEx/plugins");
 mkdir("-p", "../dist/BepInEx/patchers");
-cp("package.json", "../dist/user/mods/corter-modsync/");
-cp("src/*", "../dist/user/mods/corter-modsync/src");
+cp("package.json", "../dist/user/mods/Corter-ModSync/");
+cp("src/*", "../dist/user/mods/Corter-ModSync/src");
 
 pushd("-q", "../");
 exec("dotnet build --configuration Release");
