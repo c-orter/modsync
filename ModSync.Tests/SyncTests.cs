@@ -173,7 +173,7 @@ namespace ModSync.Tests
                 { @"BepInEx\plugins\SAIN\SAIN.dll", new(1234567) },
                 { @"BepInEx\plugins\Corter-ModSync.dll", new(1234567) },
             };
-            
+
             var updatedFiles = Sync.GetUpdatedFiles(localModFiles, remoteModFiles, previousRemoteModFiles);
 
             Assert.AreEqual(0, updatedFiles.Count);
