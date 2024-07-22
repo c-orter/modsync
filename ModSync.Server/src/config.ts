@@ -120,15 +120,7 @@ export class ConfigUtil {
 					// force: false,
 					// silent: false,
 					...(typeof syncPath === "string" ? { path: syncPath } : syncPath),
-				}))
-				.filter(({ path: syncPath }) => {
-					const exists = this.vfs.exists(path.join(process.cwd(), syncPath));
-					if (!exists)
-						this.logger.warning(
-							`Corter-ModSync: SyncPath '${syncPath}' does not exist, will be ignored.`,
-						);
-					return exists;
-				}),
+				})),
 			rawConfig.commonModExclusions,
 		);
 	}

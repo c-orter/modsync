@@ -55,7 +55,8 @@ describe("ConfigUtil", () => {
 				"config.jsonc": `{
 					"syncPaths": [
 						"plugins",
-						{ "path": "mods", "enabled": false }
+						{ "path": "mods", "enabled": false },
+						{ "path": "doesnotexist", "enabled": true }
 					],
 					// Exclusions for commonly used SPT mods
 					"commonModExclusions": [
@@ -77,6 +78,7 @@ describe("ConfigUtil", () => {
 		expect(config.syncPaths).toEqual([
 			{ path: "plugins", enabled: true },
 			{ path: "mods", enabled: false },
+			{ path: "doesnotexist", enabled: true },
 		]);
 		expect(config.commonModExclusions).toEqual(["plugins/**/node_modules"]);
 	});
