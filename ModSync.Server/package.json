@@ -23,6 +23,7 @@
 		"@vitest/coverage-v8": "^2.0.3",
 		"fs-extra": "11.2",
 		"ignore": "^5.2",
+		"jsonc": "^2.0.0",
 		"memfs": "^4.9.3",
 		"semver": "^7.6.2",
 		"shelljs": "^0.8.5",
