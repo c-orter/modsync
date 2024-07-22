@@ -21,6 +21,7 @@ describe("router", () => {
 		[
 			{ path: "plugins", enabled: true },
 			{ path: "user/mods", enabled: true },
+			{ path: "user/cache", enabled: false },
 		],
 		["plugins/**/node_modules"],
 	);
