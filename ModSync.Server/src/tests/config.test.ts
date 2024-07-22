@@ -1,9 +1,7 @@
-﻿import { VFS } from "./utils/vfs";
+﻿import { expect, beforeEach, describe, it } from "vitest";
 
-import { expect, beforeEach, describe, it } from "vitest";
-
-import { Config } from "../config";
-import { ConfigUtil } from "../config";
+import { Config, ConfigUtil } from "../config";
+import { VFS } from "./utils/vfs";
 import { JsonUtil } from "./utils/jsonUtil";
 import { PreSptModLoader } from "./utils/preSptModLoader";
 import type { VFS as IVFS } from "@spt/utils/VFS";

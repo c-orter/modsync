@@ -112,11 +112,11 @@ describe("hashModFiles", () => {
 			"Corter-ModSync: Directory 'user/bananas' does not exist, will be ignored.",
 		);
 	});
-	
+
 	it("should correctly hash folders that didn't exist initially but are created", () => {
 		const config = new Config(
 			[
-				{path: "plugins", enabled: true},
+				{ path: "plugins", enabled: true },
 				{
 					path: "user/bananas",
 					enabled: true,
@@ -127,23 +127,23 @@ describe("hashModFiles", () => {
 
 		const vfs = new VFS();
 		const syncUtil = new SyncUtil(vfs as IVFS, config, logger);
-		
+
 		const hashes = syncUtil.hashModFiles(config.syncPaths);
-		
+
 		expect(Object.keys(hashes)).toContain("plugins\\file1.dll");
 		expect(Object.keys(hashes)).toContain("plugins\\OtherMod\\other_mod.dll");
-		
+
 		expect(logger.warning).toHaveBeenCalledWith(
 			"Corter-ModSync: Directory 'user/bananas' does not exist, will be ignored.",
 		);
-		
-		fs.mkdirSync("user/bananas", {recursive: true});
+
+		fs.mkdirSync("user/bananas", { recursive: true });
 		fs.writeFileSync("user/bananas/test.txt", "test");
-		
+
 		const newHashes = syncUtil.hashModFiles(config.syncPaths);
-		
-		expect(newHashes).toMatchSnapshot()
-	})
+
+		expect(newHashes).toMatchSnapshot();
+	});
 });
 
 describe("sanitizeDownloadPath", () => {
