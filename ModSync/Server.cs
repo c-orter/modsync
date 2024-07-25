@@ -12,7 +12,7 @@ namespace ModSync
 {
     public class Server
     {
-        public async Task DownloadFile(string file, string downloadDir, SemaphoreSlim limiter, CancellationToken cancellationToken = default)
+        public async Task DownloadFile(string file, string downloadDir, SemaphoreSlim limiter, CancellationToken cancellationToken)
         {
             if (cancellationToken.IsCancellationRequested)
                 return;
@@ -22,30 +22,27 @@ namespace ModSync
 
             var retryCount = 0;
 
-            while (retryCount < 5 && !cancellationToken.IsCancellationRequested)
+            await limiter.WaitAsync(cancellationToken);
+            while (!cancellationToken.IsCancellationRequested)
             {
                 try
                 {
-                    await limiter.WaitAsync(cancellationToken);
                     using var client = new HttpClient();
-                    client.Timeout = TimeSpan.FromMinutes(5);
-                    using var fileStream = new FileStream(downloadPath, FileMode.Create);
                     using var responseStream = await client.GetStreamAsync($@"{RequestHandler.Host}/modsync/fetch/{file}");
+                    using var fileStream = new FileStream(downloadPath, FileMode.Create);
 
                     await responseStream.CopyToAsync(fileStream, (int)responseStream.Length, cancellationToken);
                     limiter.Release();
                     return;
                 }
-                catch (OperationCanceledException)
-                {
-                    throw;
-                }
                 catch (Exception e)
                 {
-                    if (retryCount < 4)
+                    if (e is TaskCanceledException && cancellationToken.IsCancellationRequested)
+                        throw;
+
+                    if (retryCount < 5)
                     {
-                        Plugin.Logger.LogError($"Failed to download '{file}'. Retrying...");
-                        Plugin.Logger.LogError(e);
+                        Plugin.Logger.LogError($"Failed to download '{file}'. Retrying ({retryCount + 1}/5)...");
                         await Task.Delay(500, cancellationToken);
                         retryCount++;
                     }

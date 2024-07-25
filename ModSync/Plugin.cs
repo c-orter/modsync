@@ -93,9 +93,11 @@ namespace ModSync
                 {
                     await task;
                 }
-                catch (OperationCanceledException) { }
-                catch
+                catch (Exception e)
                 {
+                    if (e is TaskCanceledException && cts.IsCancellationRequested)
+                        continue;
+
                     cts.Cancel();
                     progressWindow.Hide();
                     downloadErrorWindow.Show();
@@ -250,15 +252,13 @@ namespace ModSync
             try
             {
                 persist = VFS.Exists(persistPath) ? Json.Deserialize<Persist>(File.ReadAllText(persistPath)) : new();
+                Logger.LogInfo($"Parsed .modsync file with version {persist.version}");
                 if (persist.version < Persist.LATEST_VERSION)
                 {
-                    Logger.LogInfo(".modsync file format has been updated. Removing old file...");
-                    persist = new Persist
-                    {
-                        version = Persist.LATEST_VERSION
-                    };
+                    Logger.LogInfo(".modsync file format has been updated. Ignoring old file...");
+                    persist = new Persist { version = Persist.LATEST_VERSION };
                 }
-                
+
                 persist.previousSync = persist.previousSync.ToDictionary(item => item.Key, item => item.Value, StringComparer.OrdinalIgnoreCase);
             }
             catch (Exception e)

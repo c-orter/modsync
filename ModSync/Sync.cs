@@ -20,12 +20,8 @@ namespace ModSync
             Dictionary<string, ModFile> previousRemoteModFiles
         )
         {
-            var intersection = remoteModFiles.Keys.Intersect(localModFiles.Keys, StringComparer.OrdinalIgnoreCase);
-
-            if (previousRemoteModFiles.Count > 0)
-                intersection = intersection.Intersect(previousRemoteModFiles.Keys, StringComparer.OrdinalIgnoreCase);
-
-            return intersection
+            return remoteModFiles
+                .Keys.Intersect(localModFiles.Keys, StringComparer.OrdinalIgnoreCase)
                 .Where((key) => !localModFiles[key].nosync)
                 .Where(
                     (key) =>
