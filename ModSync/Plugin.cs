@@ -109,7 +109,10 @@ namespace ModSync
 
             progressWindow.Hide();
             if (!cts.IsCancellationRequested)
+            {
+                WriteModSyncFile();
                 restartWindow.Show();
+            }
         }
 
         private async Task CancelUpdatingMods()
@@ -132,17 +135,11 @@ namespace ModSync
                 {
                     previousSync = remoteModFiles,
                     downloadDir = downloadDir,
-                    filesToDelete = configDeleteRemovedFiles.Value ? removedFiles : []
+                    filesToDelete = configDeleteRemovedFiles.Value ? removedFiles : [],
+                    version = Persist.LATEST_VERSION
                 };
 
             VFS.WriteTextFile(Path.Combine(Directory.GetCurrentDirectory(), ".modsync"), Json.Serialize(newPersist));
-        }
-
-        private void FinishUpdatingMods()
-        {
-            WriteModSyncFile();
-
-            Application.Quit();
         }
 
         private void StartPlugin()
@@ -282,7 +279,7 @@ namespace ModSync
             if (!Singleton<CommonUI>.Instantiated)
                 return;
 
-            restartWindow.Draw(FinishUpdatingMods);
+            restartWindow.Draw(Application.Quit);
             progressWindow.Draw(downloadCount, addedFiles.Count + updatedFiles.Count, () => Task.Run(CancelUpdatingMods));
             updateWindow.Draw(addedFiles, updatedFiles, configDeleteRemovedFiles.Value ? removedFiles : [], () => Task.Run(SyncMods), SkipUpdatingMods);
             downloadErrorWindow.Draw(Application.Quit);
