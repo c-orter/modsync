@@ -67,7 +67,7 @@ export class SyncUtil {
 	): ModFile {
 		try {
 			return {
-				crc: crc32.unsigned(this.vfs.readFile(file)),
+				crc: crc32.unsigned(fs.readFileSync(file)),
 				// Not yet implemented
 				// required,
 				// silent,

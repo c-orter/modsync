@@ -16,6 +16,11 @@ export class VFS {
 			.map((item) => item.name);
 	}
 	public readFile(path: string) {
-		return fs.readFileSync(path);
+		const contents = fs.readFileSync(path);
+		
+		if (contents instanceof Buffer)
+			return contents.toString();
+		
+		return contents;
 	}
 }
