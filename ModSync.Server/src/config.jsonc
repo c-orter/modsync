@@ -21,6 +21,7 @@
 		// Fika
 		"user/mods/fika-server/types",
 		"user/mods/fika-server/cache",
+		"BepInEx/plugins/Fika.Dedicated.dll",
 		// Live Flea Prices
 		"user/mods/DrakiaXYZ-LiveFleaPrices/config",
 		// Questing Bots
