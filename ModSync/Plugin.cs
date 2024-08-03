@@ -61,10 +61,21 @@ namespace ModSync
             else
                 removedFiles.Clear();
 
-            if (UpdateCount > 0)
-                updateWindow.Show();
+            if (Chainloader.PluginInfos.ContainsKey("com.fika.dedicated"))
+            {
+                Logger.LogInfo($"Found Dedicated Plugin, skipping GUI!");
+                if (UpdateCount > 0)
+                    Task.Run(SyncMods);
+                else
+                    WriteModSyncFile();
+            } 
             else
-                WriteModSyncFile();
+            {
+                if (UpdateCount > 0)
+                    updateWindow.Show();
+                else
+                    WriteModSyncFile();
+            }
         }
 
         private void SkipUpdatingMods()
