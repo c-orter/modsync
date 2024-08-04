@@ -41,6 +41,7 @@ namespace ModSync
         private CancellationTokenSource cts = new();
 
         public static new readonly ManualLogSource Logger = BepInEx.Logging.Logger.CreateLogSource("ModSync");
+        public static bool IsDedicatedClient = false;
 
         private List<string> EnabledSyncPaths => syncPaths.Where((syncPath) => configSyncPathToggles[syncPath].Value).ToList();
 
@@ -61,21 +62,13 @@ namespace ModSync
             else
                 removedFiles.Clear();
 
-            if (Chainloader.PluginInfos.ContainsKey("com.fika.dedicated"))
-            {
-                Logger.LogInfo($"Found Dedicated Plugin, skipping GUI!");
-                if (UpdateCount > 0)
+            if (UpdateCount > 0)
+                if (IsDedicatedClient)
                     Task.Run(SyncMods);
                 else
-                    WriteModSyncFile();
-            } 
-            else
-            {
-                if (UpdateCount > 0)
                     updateWindow.Show();
-                else
-                    WriteModSyncFile();
-            }
+            else
+                WriteModSyncFile();
         }
 
         private void SkipUpdatingMods()
@@ -86,11 +79,14 @@ namespace ModSync
 
         private async Task SyncMods()
         {
-            updateWindow.Hide();
+            if(!IsDedicatedClient)
+                updateWindow.Hide();
             downloadDir = Utility.GetTemporaryDirectory();
 
             downloadCount = 0;
-            progressWindow.Show();
+
+            if(!IsDedicatedClient)
+                progressWindow.Show();
 
             var limiter = new SemaphoreSlim(8, maxCount: 8);
 
@@ -110,8 +106,15 @@ namespace ModSync
                         continue;
 
                     cts.Cancel();
-                    progressWindow.Hide();
-                    downloadErrorWindow.Show();
+                    if(!IsDedicatedClient)
+                    {
+                        progressWindow.Hide();
+                        downloadErrorWindow.Show();
+                    }
+                    else
+                    {
+                        Logger.LogError(e);
+                    }
                 }
 
                 downloadTasks.Remove(task);
@@ -120,11 +123,19 @@ namespace ModSync
 
             downloadTasks.Clear();
 
-            progressWindow.Hide();
+            if(!IsDedicatedClient)
+                progressWindow.Hide();
+
             if (!cts.IsCancellationRequested)
             {
                 WriteModSyncFile();
-                restartWindow.Show();
+                if (!IsDedicatedClient)
+                    restartWindow.Show();
+                else
+                {
+                    Logger.LogInfo($"Restarting Dedicated Client for the mods to take effects!");
+                    Application.Quit();
+                }
             }
         }
 
@@ -157,6 +168,9 @@ namespace ModSync
 
         private void StartPlugin()
         {
+            if (Chainloader.PluginInfos.ContainsKey("com.fika.dedicated"))
+                IsDedicatedClient = true;
+
             cts = new();
             if (persist.downloadDir != string.Empty || persist.filesToDelete.Count != 0)
             {
