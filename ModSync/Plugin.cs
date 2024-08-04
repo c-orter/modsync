@@ -65,7 +65,7 @@ namespace ModSync
             if (UpdateCount > 0)
                 if (IsDedicatedClient)
                 {
-                    Logger.LogInfo($"Found Dedicated Plugin, skipping GUI!");
+                    Logger.LogInfo($"Dedicated Client, Bypassing GUI!");
                     Task.Run(SyncMods);
                 }
                 else
@@ -136,7 +136,7 @@ namespace ModSync
                     restartWindow.Show();
                 else
                 {
-                    Logger.LogInfo($"Restarting Dedicated Client for the mods to take effects!");
+                    Logger.LogError($"Restarting Dedicated Client for the mods to take effect!");
                     Application.Quit();
                 }
             }
@@ -172,7 +172,10 @@ namespace ModSync
         private void StartPlugin()
         {
             if (Chainloader.PluginInfos.ContainsKey("com.fika.dedicated"))
+            {
+                Logger.LogWarning($"Dedicated Plugin detected, enabling GUI Bypass!");
                 IsDedicatedClient = true;
+            }
 
             cts = new();
             if (persist.downloadDir != string.Empty || persist.filesToDelete.Count != 0)
