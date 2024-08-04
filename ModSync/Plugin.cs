@@ -64,7 +64,10 @@ namespace ModSync
 
             if (UpdateCount > 0)
                 if (IsDedicatedClient)
+                {
+                    Logger.LogInfo($"Found Dedicated Plugin, skipping GUI!");
                     Task.Run(SyncMods);
+                }
                 else
                     updateWindow.Show();
             else
