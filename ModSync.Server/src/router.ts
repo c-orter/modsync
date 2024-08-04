@@ -42,7 +42,10 @@ export class Router {
 		res.writeHead(200, "OK");
 		res.end(
 			JSON.stringify(
-				this.config.enabledSyncPaths.map(({ path }) => winPath(path)),
+				this.config.syncPaths.map(({ path, ...rest }) => ({
+					path: winPath(path),
+					...rest,
+				})),
 			),
 		);
 	}
@@ -54,7 +57,7 @@ export class Router {
 		res.setHeader("Content-Type", "application/json");
 		res.writeHead(200, "OK");
 		res.end(
-			JSON.stringify(this.syncUtil.hashModFiles(this.config.enabledSyncPaths)),
+			JSON.stringify(this.syncUtil.hashModFiles(this.config.syncPaths)),
 		);
 	}
 
@@ -66,7 +69,7 @@ export class Router {
 
 		const sanitizedPath = this.syncUtil.sanitizeDownloadPath(
 			filePath,
-			this.config.enabledSyncPaths,
+			this.config.syncPaths,
 		);
 
 		if (!this.vfs.exists(sanitizedPath))

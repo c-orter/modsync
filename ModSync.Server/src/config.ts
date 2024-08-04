@@ -9,9 +9,9 @@ import type { ILogger } from "@spt/models/spt/utils/ILogger";
 export type SyncPath = {
 	path: string;
 	enabled?: boolean;
-	// Not yet implemented
-	// required?: boolean;
-	// silent?: boolean;
+	enforced?: boolean;
+	silent?: boolean;
+	restartRequired?: boolean;
 };
 
 type RawConfig = {
@@ -24,10 +24,6 @@ export class Config {
 		public syncPaths: Required<SyncPath>[],
 		public commonModExclusions: string[],
 	) {}
-
-	get enabledSyncPaths(): Required<SyncPath>[] {
-		return this.syncPaths.filter(({ enabled }) => enabled);
-	}
 
 	public isExcluded(filePath: string): boolean {
 		return this.commonModExclusions.some((exclusion) =>
@@ -113,14 +109,14 @@ export class ConfigUtil {
 		this.validateConfig(rawConfig);
 
 		return new Config(
-			rawConfig.syncPaths
-				.map((syncPath) => ({
-					enabled: true,
-					// Not yet implemented
-					// force: false,
-					// silent: false,
-					...(typeof syncPath === "string" ? { path: syncPath } : syncPath),
-				})),
+			rawConfig.syncPaths.map((syncPath) => ({
+				enabled: true,
+				// Not yet implemented
+				enforced: false,
+				silent: false,
+				restartRequired: true,
+				...(typeof syncPath === "string" ? { path: syncPath } : syncPath),
+			})),
 			rawConfig.commonModExclusions,
 		);
 	}

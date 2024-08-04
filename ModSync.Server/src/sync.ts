@@ -77,13 +77,19 @@ export class SyncUtil {
 		}
 	}
 
-	public hashModFiles(syncPaths: Config["syncPaths"]): Record<string, ModFile> {
+	public hashModFiles(
+		syncPaths: Config["syncPaths"],
+	): Record<string, Record<string, ModFile>> {
 		return Object.fromEntries(
-			syncPaths.flatMap((syncPath) =>
-				this.getFilesInDir(syncPath.path).map(
-					(file) => [winPath(file), this.buildModFile(file, syncPath)] as const,
+			syncPaths.map((syncPath) => [
+				winPath(syncPath.path),
+				Object.fromEntries(
+					this.getFilesInDir(syncPath.path).map(
+						(file) =>
+							[winPath(file), this.buildModFile(file, syncPath)] as const,
+					),
 				),
-			),
+			]),
 		);
 	}
 

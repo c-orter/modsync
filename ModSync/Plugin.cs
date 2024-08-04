@@ -24,11 +24,11 @@ namespace ModSync
         private ConfigEntry<bool> configDeleteRemovedFiles;
 
         private Persist persist;
-        private string[] syncPaths = [];
-        private Dictionary<string, ModFile> remoteModFiles = [];
-        private List<string> addedFiles = [];
-        private List<string> updatedFiles = [];
-        private List<string> removedFiles = [];
+        private SyncPath[] syncPaths = [];
+        private Dictionary<string, Dictionary<string, ModFile>> remoteModFiles = [];
+        private Dictionary<string, List<string>> addedFiles = [];
+        private Dictionary<string, List<string>> updatedFiles = [];
+        private Dictionary<string, List<string>> removedFiles = [];
 
         private List<Task> downloadTasks = [];
 
@@ -42,16 +42,16 @@ namespace ModSync
 
         public static new readonly ManualLogSource Logger = BepInEx.Logging.Logger.CreateLogSource("ModSync");
 
-        private List<string> EnabledSyncPaths => syncPaths.Where((syncPath) => configSyncPathToggles[syncPath].Value).ToList();
+        private List<SyncPath> EnabledSyncPaths => syncPaths.Where((syncPath) => configSyncPathToggles[syncPath.path].Value).ToList();
 
-        private void AnalyzeModFiles(Dictionary<string, ModFile> localModFiles)
+        private void AnalyzeModFiles(Dictionary<string, Dictionary<string, ModFile>> localModFiles)
         {
             remoteModFiles = server
                 .GetRemoteModFileHashes()
-                .Where((kvp) => EnabledSyncPaths.Any((syncPath) => kvp.Key == syncPath || kvp.Key.StartsWith($"{syncPath}\\")))
+                .Where((kvp) => EnabledSyncPaths.Any((syncPath) => syncPath.path == kvp.Key))
                 .ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.OrdinalIgnoreCase);
 
-            Sync.CompareModFiles(localModFiles, remoteModFiles, persist.previousSync, out addedFiles, out updatedFiles, out removedFiles);
+            Sync.CompareModFiles([.. syncPaths], localModFiles, remoteModFiles, persist.previousSync, out addedFiles, out updatedFiles, out removedFiles);
 
             Logger.LogInfo($"Found {UpdateCount} files to download.");
             Logger.LogInfo($"- {addedFiles.Count} added");
@@ -83,7 +83,11 @@ namespace ModSync
 
             var limiter = new SemaphoreSlim(8, maxCount: 8);
 
-            downloadTasks = addedFiles.Union(updatedFiles).Select((file) => server.DownloadFile(file, downloadDir, limiter, cts.Token)).ToList();
+            downloadTasks = addedFiles
+                .SelectMany((kvp) => kvp.Value)
+                .Union(updatedFiles.SelectMany((kvp) => kvp.Value))
+                .Select((file) => server.DownloadFile(file, downloadDir, limiter, cts.Token))
+                .ToList();
 
             while (downloadTasks.Count > 0 && !cts.IsCancellationRequested)
             {
@@ -137,7 +141,7 @@ namespace ModSync
                 {
                     previousSync = remoteModFiles,
                     downloadDir = downloadDir,
-                    filesToDelete = configDeleteRemovedFiles.Value ? removedFiles : [],
+                    filesToDelete = configDeleteRemovedFiles.Value ? removedFiles.SelectMany((kvp) => kvp.Value).ToList() : [],
                     version = Persist.LATEST_VERSION
                 };
 
@@ -177,7 +181,7 @@ namespace ModSync
 
             foreach (var syncPath in syncPaths)
             {
-                if (Path.IsPathRooted(syncPath))
+                if (Path.IsPathRooted(syncPath.path))
                 {
                     Chainloader.DependencyErrors.Add(
                         $"Could not load {Info.Metadata.Name} due to invalid sync path. Paths must be relative to SPT server root! Invalid path '{syncPath}'"
@@ -185,7 +189,7 @@ namespace ModSync
                     return;
                 }
 
-                if (!Path.GetFullPath(syncPath).StartsWith(Directory.GetCurrentDirectory()))
+                if (!Path.GetFullPath(syncPath.path).StartsWith(Directory.GetCurrentDirectory()))
                 {
                     Chainloader.DependencyErrors.Add(
                         $"Could not load {Info.Metadata.Name} due to invalid sync path. Paths must be within SPT server root! Invalid path '{syncPath}'"
@@ -198,8 +202,13 @@ namespace ModSync
                 .Select(
                     (syncPath) =>
                         new KeyValuePair<string, ConfigEntry<bool>>(
-                            syncPath,
-                            Config.Bind("Synced Paths", syncPath.Replace("\\", "/"), true, $"Should the mod attempt to sync files from {syncPath}")
+                            syncPath.path,
+                            Config.Bind(
+                                "Synced Paths",
+                                syncPath.path.Replace("\\", "/"),
+                                syncPath.enabled,
+                                $"Should the mod attempt to sync files from {syncPath}"
+                            )
                         )
                 )
                 .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
@@ -281,7 +290,13 @@ namespace ModSync
 
             restartWindow.Draw(Application.Quit);
             progressWindow.Draw(downloadCount, addedFiles.Count + updatedFiles.Count, () => Task.Run(CancelUpdatingMods));
-            updateWindow.Draw(addedFiles, updatedFiles, configDeleteRemovedFiles.Value ? removedFiles : [], () => Task.Run(SyncMods), SkipUpdatingMods);
+            updateWindow.Draw(
+                addedFiles.SelectMany(kvp => kvp.Value).ToList(),
+                updatedFiles.SelectMany(kvp => kvp.Value).ToList(),
+                (configDeleteRemovedFiles.Value ? removedFiles : []).SelectMany(kvp => kvp.Value).ToList(),
+                () => Task.Run(SyncMods),
+                SkipUpdatingMods
+            );
             downloadErrorWindow.Draw(Application.Quit);
         }
 

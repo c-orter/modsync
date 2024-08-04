@@ -17,10 +17,9 @@ export class VFS {
 	}
 	public readFile(path: string) {
 		const contents = fs.readFileSync(path);
-		
-		if (contents instanceof Buffer)
-			return contents.toString();
-		
+
+		if (contents instanceof Buffer) return contents.toString();
+
 		return contents;
 	}
 }

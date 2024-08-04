@@ -41,7 +41,15 @@ const directoryStructure = {
 };
 
 const config = new Config(
-	[{ path: "plugins", enabled: true /* silent: false, required: false */ }],
+	[
+		{
+			path: "plugins",
+			enabled: true,
+			enforced: false,
+			restartRequired: true,
+			silent: false,
+		},
+	],
 	[],
 );
 
@@ -64,7 +72,7 @@ describe("hashModFiles", () => {
 			),
 		).toBe(false);
 
-		expect("plugins\\OtherMod\\other_mod.dll" in hashes).toBe(true);
+		expect("plugins\\OtherMod\\other_mod.dll" in hashes["plugins"]).toBe(true);
 
 		expect(hashes).toMatchSnapshot();
 	});
@@ -72,10 +80,19 @@ describe("hashModFiles", () => {
 	it("should correctly hash multiple folders", () => {
 		const config = new Config(
 			[
-				{ path: "plugins", enabled: true },
+				{
+					path: "plugins",
+					enabled: true,
+					enforced: false,
+					restartRequired: true,
+					silent: false,
+				},
 				{
 					path: "user/mods",
 					enabled: true,
+					enforced: false,
+					restartRequired: false,
+					silent: false,
 				},
 			],
 			["user/mods/**/*.js", "user/mods/**/*.js.map"],
@@ -92,10 +109,19 @@ describe("hashModFiles", () => {
 	it("should correctly ignore folders that do not exist", () => {
 		const config = new Config(
 			[
-				{ path: "plugins", enabled: true },
+				{
+					path: "plugins",
+					enabled: true,
+					enforced: false,
+					restartRequired: true,
+					silent: false,
+				},
 				{
 					path: "user/bananas",
 					enabled: true,
+					enforced: false,
+					restartRequired: false,
+					silent: false,
 				},
 			],
 			["user/mods/**/*.js", "user/mods/**/*.js.map"],
@@ -106,8 +132,10 @@ describe("hashModFiles", () => {
 
 		const hashes = syncUtil.hashModFiles(config.syncPaths);
 
-		expect(Object.keys(hashes)).toContain("plugins\\file1.dll");
-		expect(Object.keys(hashes)).toContain("plugins\\OtherMod\\other_mod.dll");
+		expect(Object.keys(hashes["plugins"])).toContain("plugins\\file1.dll");
+		expect(Object.keys(hashes["plugins"])).toContain(
+			"plugins\\OtherMod\\other_mod.dll",
+		);
 		expect(logger.warning).toHaveBeenCalledWith(
 			"Corter-ModSync: Directory 'user/bananas' does not exist, will be ignored.",
 		);
@@ -116,10 +144,19 @@ describe("hashModFiles", () => {
 	it("should correctly hash folders that didn't exist initially but are created", () => {
 		const config = new Config(
 			[
-				{ path: "plugins", enabled: true },
+				{
+					path: "plugins",
+					enabled: true,
+					enforced: false,
+					restartRequired: true,
+					silent: false,
+				},
 				{
 					path: "user/bananas",
 					enabled: true,
+					enforced: false,
+					restartRequired: false,
+					silent: false,
 				},
 			],
 			["user/mods/**/*.js", "user/mods/**/*.js.map"],
@@ -130,8 +167,10 @@ describe("hashModFiles", () => {
 
 		const hashes = syncUtil.hashModFiles(config.syncPaths);
 
-		expect(Object.keys(hashes)).toContain("plugins\\file1.dll");
-		expect(Object.keys(hashes)).toContain("plugins\\OtherMod\\other_mod.dll");
+		expect(Object.keys(hashes["plugins"])).toContain("plugins\\file1.dll");
+		expect(Object.keys(hashes["plugins"])).toContain(
+			"plugins\\OtherMod\\other_mod.dll",
+		);
 
 		expect(logger.warning).toHaveBeenCalledWith(
 			"Corter-ModSync: Directory 'user/bananas' does not exist, will be ignored.",

@@ -61,15 +61,19 @@ namespace ModSync
             return Json.Deserialize<string>(RequestHandler.GetJson("/modsync/version"));
         }
 
-        public string[] GetModSyncPaths()
+        public SyncPath[] GetModSyncPaths()
         {
-            return Json.Deserialize<string[]>(RequestHandler.GetJson("/modsync/paths"));
+            return Json.Deserialize<SyncPath[]>(RequestHandler.GetJson("/modsync/paths"));
         }
 
-        public Dictionary<string, ModFile> GetRemoteModFileHashes()
+        public Dictionary<string, Dictionary<string, ModFile>> GetRemoteModFileHashes()
         {
-            return Json.Deserialize<Dictionary<string, ModFile>>(RequestHandler.GetJson("/modsync/hashes"))
-                .ToDictionary(item => item.Key, item => item.Value, StringComparer.OrdinalIgnoreCase);
+            return Json.Deserialize<Dictionary<string, Dictionary<string, ModFile>>>(RequestHandler.GetJson("/modsync/hashes"))
+                .ToDictionary(
+                    item => item.Key,
+                    item => item.Value.ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.OrdinalIgnoreCase),
+                    StringComparer.OrdinalIgnoreCase
+                );
         }
     }
 }

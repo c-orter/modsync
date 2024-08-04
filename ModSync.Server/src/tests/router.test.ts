@@ -19,9 +19,27 @@ vi.mock("node:fs", () => ({ ...fs, default: fs }));
 describe("router", () => {
 	const config = new Config(
 		[
-			{ path: "plugins", enabled: true },
-			{ path: "user/mods", enabled: true },
-			{ path: "user/cache", enabled: false },
+			{
+				path: "plugins",
+				enabled: true,
+				enforced: false,
+				silent: false,
+				restartRequired: true,
+			},
+			{
+				path: "user/mods",
+				enabled: true,
+				enforced: false,
+				silent: false,
+				restartRequired: false,
+			},
+			{
+				path: "user/cache",
+				enabled: false,
+				enforced: false,
+				silent: false,
+				restartRequired: false,
+			},
 		],
 		["plugins/**/node_modules"],
 	);
@@ -65,7 +83,29 @@ describe("router", () => {
 			router.getSyncPaths(res, mock<RegExpMatchArray>());
 
 			expect(res.end).toHaveBeenCalledWith(
-				JSON.stringify(["plugins", "user\\mods"]),
+				JSON.stringify([
+					{
+						path: "plugins",
+						enabled: true,
+						enforced: false,
+						silent: false,
+						restartRequired: true,
+					},
+					{
+						path: "user\\mods",
+						enabled: true,
+						enforced: false,
+						silent: false,
+						restartRequired: false,
+					},
+					{
+						path: "user\\cache",
+						enabled: false,
+						enforced: false,
+						silent: false,
+						restartRequired: false,
+					},
+				]),
 			);
 		});
 	});
@@ -108,8 +148,12 @@ describe("router", () => {
 
 			expect(res.end).toHaveBeenCalledWith(
 				JSON.stringify({
-					"plugins\\file1.dll": { crc: 1338358949 },
-					"plugins\\OtherMod\\other_mod.dll": { crc: 2471037616 },
+					plugins: {
+						"plugins\\file1.dll": {crc: 1338358949},
+						"plugins\\OtherMod\\other_mod.dll": {crc: 2471037616},
+					},
+					"user\\mods": {},
+					"user\\cache": {},
 				}),
 			);
 		});

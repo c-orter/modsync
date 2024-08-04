@@ -16,17 +16,11 @@ describe("Config", () => {
 	beforeEach(() => {
 		config = new Config(
 			[
-				{ path: "plugins", enabled: true },
-				{ path: "mods", enabled: false },
+				{ path: "plugins", enabled: true, enforced: false, silent: false, restartRequired: true },
+				{ path: "mods", enabled: false, enforced: false, silent: false, restartRequired: false },
 			],
 			["plugins/**/node_modules", "plugins/**/*.js"],
 		);
-	});
-
-	it("should get enabled sync paths", () => {
-		expect(config.enabledSyncPaths).toEqual([
-			{ path: "plugins", enabled: true },
-		]);
 	});
 
 	it("should correctly identify excluded paths", () => {
@@ -76,9 +70,27 @@ describe("ConfigUtil", () => {
 		).load();
 
 		expect(config.syncPaths).toEqual([
-			{ path: "plugins", enabled: true },
-			{ path: "mods", enabled: false },
-			{ path: "doesnotexist", enabled: true },
+			{
+				"enabled": true,
+				"enforced": false,
+				"path": "plugins",
+				"restartRequired": true,
+				"silent": false,
+			},
+			{
+				"enabled": false,
+				"enforced": false,
+				"path": "mods",
+				"restartRequired": true,
+				"silent": false,
+			},
+			{
+				"enabled": true,
+				"enforced": false,
+				"path": "doesnotexist",
+				"restartRequired": true,
+				"silent": false,
+			},
 		]);
 		expect(config.commonModExclusions).toEqual(["plugins/**/node_modules"]);
 	});
