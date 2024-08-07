@@ -43,13 +43,24 @@ namespace ModSync
         public static new readonly ManualLogSource Logger = BepInEx.Logging.Logger.CreateLogSource("ModSync");
 
         private List<SyncPath> EnabledSyncPaths => syncPaths.Where((syncPath) => configSyncPathToggles[syncPath.path].Value).ToList();
+        private List<string> downloadFiles => EnabledSyncPaths.SelectMany((syncPath) => addedFiles[syncPath.path].Union(updatedFiles[syncPath.path])).ToList();
+
+        private bool EnforcedMode =>
+            EnabledSyncPaths.All(
+                (syncPath) =>
+                    syncPath.enforced
+                    || (addedFiles[syncPath.path].Count == 0 && updatedFiles[syncPath.path].Count == 0 && removedFiles[syncPath.path].Count == 0)
+            );
+        private bool SilentMode =>
+            EnabledSyncPaths.All(
+                (syncPath) =>
+                    syncPath.silent
+                    || (addedFiles[syncPath.path].Count == 0 && updatedFiles[syncPath.path].Count == 0 && removedFiles[syncPath.path].Count == 0)
+            );
 
         private void AnalyzeModFiles(Dictionary<string, Dictionary<string, ModFile>> localModFiles)
         {
-            remoteModFiles = server
-                .GetRemoteModFileHashes()
-                .Where((kvp) => EnabledSyncPaths.Any((syncPath) => syncPath.path == kvp.Key))
-                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.OrdinalIgnoreCase);
+            remoteModFiles = server.GetRemoteModFileHashes().ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.OrdinalIgnoreCase);
 
             Sync.CompareModFiles([.. syncPaths], localModFiles, remoteModFiles, persist.previousSync, out addedFiles, out updatedFiles, out removedFiles);
 
@@ -62,18 +73,39 @@ namespace ModSync
                 removedFiles.Clear();
 
             if (UpdateCount > 0)
-                updateWindow.Show();
+            {
+                if (SilentMode)
+                    Task.Run(() => SyncMods(downloadFiles));
+                else
+                    updateWindow.Show();
+            }
             else
                 WriteModSyncFile();
         }
 
         private void SkipUpdatingMods()
         {
-            pluginFinished = true;
-            updateWindow.Hide();
+            var enforcedDownloads = EnabledSyncPaths
+                .Where(syncPath => syncPath.enforced)
+                .SelectMany(syncPath => addedFiles[syncPath.path].Union(updatedFiles[syncPath.path]))
+                .ToList();
+            if (
+                EnabledSyncPaths.Any(
+                    (syncPath) =>
+                        syncPath.enforced && (addedFiles[syncPath.path].Any() || updatedFiles[syncPath.path].Any() || removedFiles[syncPath.path].Any())
+                )
+            )
+            {
+                Task.Run(() => SyncMods(enforcedDownloads));
+            }
+            else
+            {
+                pluginFinished = true;
+                updateWindow.Hide();
+            }
         }
 
-        private async Task SyncMods()
+        private async Task SyncMods(List<string> filesToDownload)
         {
             updateWindow.Hide();
             downloadDir = Utility.GetTemporaryDirectory();
@@ -83,11 +115,7 @@ namespace ModSync
 
             var limiter = new SemaphoreSlim(8, maxCount: 8);
 
-            downloadTasks = addedFiles
-                .SelectMany((kvp) => kvp.Value)
-                .Union(updatedFiles.SelectMany((kvp) => kvp.Value))
-                .Select((file) => server.DownloadFile(file, downloadDir, limiter, cts.Token))
-                .ToList();
+            downloadTasks = filesToDownload.Select((file) => server.DownloadFile(file, downloadDir, limiter, cts.Token)).ToList();
 
             while (downloadTasks.Count > 0 && !cts.IsCancellationRequested)
             {
@@ -288,16 +316,50 @@ namespace ModSync
             if (!Singleton<CommonUI>.Instantiated)
                 return;
 
-            restartWindow.Draw(Application.Quit);
-            progressWindow.Draw(downloadCount, addedFiles.Count + updatedFiles.Count, () => Task.Run(CancelUpdatingMods));
-            updateWindow.Draw(
-                addedFiles.SelectMany(kvp => kvp.Value).ToList(),
-                updatedFiles.SelectMany(kvp => kvp.Value).ToList(),
-                (configDeleteRemovedFiles.Value ? removedFiles : []).SelectMany(kvp => kvp.Value).ToList(),
-                () => Task.Run(SyncMods),
-                SkipUpdatingMods
-            );
-            downloadErrorWindow.Draw(Application.Quit);
+            if (restartWindow.Active)
+                restartWindow.Draw(Application.Quit);
+            
+            if (progressWindow.Active)
+                progressWindow.Draw(
+                    downloadCount,
+                    addedFiles.Count + updatedFiles.Count,
+                    SilentMode || EnforcedMode ? null : () => Task.Run(CancelUpdatingMods)
+                );
+            
+            if (updateWindow.Active)
+            {
+                var optional = EnabledSyncPaths
+                    .Where((syncPath) => !syncPath.enforced)
+                    .SelectMany(
+                        (syncPath) =>
+                            addedFiles[syncPath.path]
+                                .Select((file) => $"ADDED {file}")
+                                .Union(updatedFiles[syncPath.path].Select((file) => $"UPDATED {file}"))
+                                .Union(removedFiles[syncPath.path].Select((file) => $"REMOVED {file}"))
+                    )
+                    .ToList();
+                var required = EnabledSyncPaths
+                    .Where((syncPath) => syncPath.enforced)
+                    .SelectMany(
+                        (syncPath) =>
+                            addedFiles[syncPath.path]
+                                .Select((file) => $"ADDED {file}")
+                                .Union(updatedFiles[syncPath.path].Select((file) => $"UPDATED {file}"))
+                                .Union(removedFiles[syncPath.path].Select((file) => $"REMOVED {file}"))
+                    )
+                    .ToList();
+
+                updateWindow.Draw(
+                    optional.Any() && required.Any()
+                        ? $"{string.Join("\n", optional)}\n\n[Enforced]\n{string.Join("\n", required)}"
+                        : string.Join("\n", optional.Union(required)),
+                    () => Task.Run(() => SyncMods(downloadFiles)),
+                    SkipUpdatingMods
+                );
+            }
+            
+            if (downloadErrorWindow.Active)
+                downloadErrorWindow.Draw(Application.Quit);
         }
 
         public void Update()

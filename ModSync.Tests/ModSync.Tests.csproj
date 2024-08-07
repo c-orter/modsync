@@ -74,6 +74,8 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="IntegrationTests\ClientNoSync\local\SAIN.dll" />
+    <Content Include="IntegrationTests\ClientNoSync\remote\SAIN.dll" />
     <Content Include="IntegrationTests\DoNotUpdateWhenLocalChanges\local\SAIN.dll" />
     <Content Include="IntegrationTests\DoNotUpdateWhenLocalChanges\remote\SAIN.dll" />
     <Content Include="IntegrationTests\InitialEmptyManyFiles\remote\plugins\Corter-ModSync.dll" />

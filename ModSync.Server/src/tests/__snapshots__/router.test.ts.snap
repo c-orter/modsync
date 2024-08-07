@@ -1,0 +1,9 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`router > getHashes > should return hashes 1`] = `
+[
+  [
+    "{"plugins":{"plugins\\\\file1.dll":{"nosync":false,"crc":1338358949},"plugins\\\\file2.dll":{"nosync":true,"crc":0},"plugins\\\\file3.dll":{"nosync":true,"crc":0},"plugins\\\\ModName\\\\mod_name.dll":{"nosync":true,"crc":0},"plugins\\\\OtherMod\\\\other_mod.dll":{"nosync":false,"crc":2471037616},"plugins\\\\OtherMod\\\\subdir\\\\image.png":{"nosync":true,"crc":0}},"user\\\\mods":{},"user\\\\cache":{}}",
+  ],
+]
+`;

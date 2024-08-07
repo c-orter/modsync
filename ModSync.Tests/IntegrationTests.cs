@@ -213,5 +213,28 @@ namespace ModSync.Tests
             Assert.AreEqual(1, downloadedFiles.Count);
             Assert.AreEqual(@"plugins\sain.dll", downloadedFiles[0]);
         }
+
+        [TestMethod]
+        public void TestClientNoSync()
+        {
+            var testPath = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), @"..\..\IntegrationTests", "ClientNoSync"));
+
+            List<string> downloadedFiles = [];
+
+            var persist = RunPlugin(
+                testPath,
+                syncPaths: [new SyncPath("plugins")],
+                configDeleteRemovedFiles: true,
+                out var addedFiles,
+                out var updatedFiles,
+                out var removedFiles,
+                ref downloadedFiles
+            );
+            
+            Assert.AreEqual(0, addedFiles["plugins"].Count);
+            Assert.AreEqual(0, updatedFiles["plugins"].Count);
+            Assert.AreEqual(0, removedFiles["plugins"].Count);
+            Assert.AreEqual(0, persist.filesToDelete.Count);
+        }
     }
 }

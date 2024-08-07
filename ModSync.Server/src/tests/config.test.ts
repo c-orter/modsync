@@ -1,4 +1,4 @@
-﻿import { expect, beforeEach, describe, it } from "vitest";
+﻿import { expect, beforeEach, describe, it, vi } from "vitest";
 
 import { Config, ConfigUtil } from "../config";
 import { VFS } from "./utils/vfs";
@@ -7,17 +7,19 @@ import { PreSptModLoader } from "./utils/preSptModLoader";
 import type { VFS as IVFS } from "@spt/utils/VFS";
 import type { JsonUtil as IJsonUtil } from "@spt/utils/JsonUtil";
 import type { PreSptModLoader as IPreSptModLoader } from "@spt/loaders/PreSptModLoader";
-import { vol } from "memfs";
+import { fs, vol } from "memfs";
 import type { ILogger } from "@spt/models/spt/utils/ILogger";
 import { mock } from "vitest-mock-extended";
+
+vi.mock("node:fs", async () => (await vi.importActual("memfs")).fs);
 
 describe("Config", () => {
 	let config: Config;
 	beforeEach(() => {
 		config = new Config(
 			[
-				{ path: "plugins", enabled: true, enforced: false, silent: false, restartRequired: true },
-				{ path: "mods", enabled: false, enforced: false, silent: false, restartRequired: false },
+				{ path: "plugins", enabled: true, enforced: false, silent: false },
+				{ path: "mods", enabled: false, enforced: false, silent: false },
 			],
 			["plugins/**/node_modules", "plugins/**/*.js"],
 		);
@@ -45,19 +47,17 @@ describe("ConfigUtil", () => {
 
 	it("should load config", () => {
 		vol.fromNestedJSON({
-			src: {
-				"config.jsonc": `{
-					"syncPaths": [
-						"plugins",
-						{ "path": "mods", "enabled": false },
-						{ "path": "doesnotexist", "enabled": true }
-					],
-					// Exclusions for commonly used SPT mods
-					"commonModExclusions": [
-						"plugins/**/node_modules"
-					]
-				}`,
-			},
+			"config.jsonc": `{
+				"syncPaths": [
+					"plugins",
+					{ "path": "mods", "enabled": false },
+					{ "path": "doesnotexist", "enabled": true }
+				],
+				// Exclusions for commonly used SPT mods
+				"commonModExclusions": [
+					"plugins/**/node_modules"
+				]
+			}`,
 			plugins: {},
 			mods: {},
 		});
@@ -71,25 +71,25 @@ describe("ConfigUtil", () => {
 
 		expect(config.syncPaths).toEqual([
 			{
-				"enabled": true,
-				"enforced": false,
-				"path": "plugins",
-				"restartRequired": true,
-				"silent": false,
+				enabled: true,
+				enforced: false,
+				path: "plugins",
+				restartRequired: true,
+				silent: false,
 			},
 			{
-				"enabled": false,
-				"enforced": false,
-				"path": "mods",
-				"restartRequired": true,
-				"silent": false,
+				enabled: false,
+				enforced: false,
+				path: "mods",
+				restartRequired: true,
+				silent: false,
 			},
 			{
-				"enabled": true,
-				"enforced": false,
-				"path": "doesnotexist",
-				"restartRequired": true,
-				"silent": false,
+				enabled: true,
+				enforced: false,
+				path: "doesnotexist",
+				restartRequired: true,
+				silent: false,
 			},
 		]);
 		expect(config.commonModExclusions).toEqual(["plugins/**/node_modules"]);

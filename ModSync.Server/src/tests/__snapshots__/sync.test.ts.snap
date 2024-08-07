@@ -2,39 +2,113 @@
 
 exports[`hashModFiles > should correctly hash folders that didn't exist initially but are created 1`] = `
 {
-  "plugins\\OtherMod\\other_mod.dll": {
-    "crc": 2471037616,
+  "plugins": {
+    "plugins\\ModName\\mod_name.dll": {
+      "crc": 0,
+      "nosync": true,
+    },
+    "plugins\\OtherMod\\other_mod.dll": {
+      "crc": 2471037616,
+      "nosync": false,
+    },
+    "plugins\\OtherMod\\subdir\\image.png": {
+      "crc": 0,
+      "nosync": true,
+    },
+    "plugins\\file1.dll": {
+      "crc": 1338358949,
+      "nosync": false,
+    },
+    "plugins\\file2.dll": {
+      "crc": 0,
+      "nosync": true,
+    },
+    "plugins\\file3.dll": {
+      "crc": 0,
+      "nosync": true,
+    },
   },
-  "plugins\\file1.dll": {
-    "crc": 1338358949,
-  },
-  "user\\bananas\\test.txt": {
-    "crc": 3632233996,
+  "user\\bananas": {
+    "user\\bananas\\test.txt": {
+      "crc": 3632233996,
+      "nosync": false,
+    },
   },
 }
 `;
 
 exports[`hashModFiles > should correctly hash multiple folders 1`] = `
 {
-  "plugins\\OtherMod\\other_mod.dll": {
-    "crc": 2471037616,
+  "plugins": {
+    "plugins\\ModName\\mod_name.dll": {
+      "crc": 0,
+      "nosync": true,
+    },
+    "plugins\\OtherMod\\other_mod.dll": {
+      "crc": 2471037616,
+      "nosync": false,
+    },
+    "plugins\\OtherMod\\subdir\\image.png": {
+      "crc": 0,
+      "nosync": true,
+    },
+    "plugins\\file1.dll": {
+      "crc": 1338358949,
+      "nosync": false,
+    },
+    "plugins\\file2.dll": {
+      "crc": 0,
+      "nosync": true,
+    },
+    "plugins\\file3.dll": {
+      "crc": 0,
+      "nosync": true,
+    },
   },
-  "plugins\\file1.dll": {
-    "crc": 1338358949,
-  },
-  "user\\mods\\testMod\\test.ts": {
-    "crc": 171989770,
+  "user\\mods": {
+    "user\\mods\\testMod\\test.js": {
+      "crc": 0,
+      "nosync": true,
+    },
+    "user\\mods\\testMod\\test.js.map": {
+      "crc": 0,
+      "nosync": true,
+    },
+    "user\\mods\\testMod\\test.ts": {
+      "crc": 171989770,
+      "nosync": false,
+    },
   },
 }
 `;
 
 exports[`hashModFiles > should hash mod files 1`] = `
 {
-  "plugins\\OtherMod\\other_mod.dll": {
-    "crc": 2471037616,
-  },
-  "plugins\\file1.dll": {
-    "crc": 1338358949,
+  "plugins": {
+    "plugins\\ModName\\mod_name.dll": {
+      "crc": 0,
+      "nosync": true,
+    },
+    "plugins\\OtherMod\\other_mod.dll": {
+      "crc": 2471037616,
+      "nosync": false,
+    },
+    "plugins\\OtherMod\\subdir\\image.png": {
+      "crc": 0,
+      "nosync": true,
+    },
+    "plugins\\file1.dll": {
+      "crc": 1338358949,
+      "nosync": false,
+    },
+    "plugins\\file2.dll": {
+      "crc": 0,
+      "nosync": true,
+    },
+    "plugins\\file3.dll": {
+      "crc": 0,
+      "nosync": true,
+    },
   },
 }
 `;

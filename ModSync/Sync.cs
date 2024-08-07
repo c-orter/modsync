@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using JetBrains.Annotations;
 using SPT.Common.Utils;
 using SPT.Custom.Utils;
 
@@ -16,12 +15,18 @@ namespace ModSync
             Dictionary<string, Dictionary<string, ModFile>> remoteModFiles
         )
         {
+            Plugin.Logger.LogInfo($"Local Mod Files: {Json.Serialize(localModFiles)}");
+            Plugin.Logger.LogInfo($"Remote Mod Files: {Json.Serialize(remoteModFiles)}");
+
             return syncPaths
                 .Select(
                     (syncPath) =>
                         new KeyValuePair<string, List<string>>(
                             syncPath.path,
-                            remoteModFiles[syncPath.path].Keys.Except(localModFiles[syncPath.path].Keys, StringComparer.OrdinalIgnoreCase).ToList()
+                            remoteModFiles[syncPath.path]
+                                .Keys.Where((file) => !remoteModFiles[syncPath.path][file].nosync)
+                                .Except(localModFiles[syncPath.path].Keys, StringComparer.OrdinalIgnoreCase)
+                                .ToList()
                         )
                 )
                 .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
@@ -50,7 +55,9 @@ namespace ModSync
                                         || remoteModFiles[syncPath.path][file].crc != modFile.crc
                                 );
 
-                        query = query.Where((file) => remoteModFiles[syncPath.path][file].crc != localModFiles[syncPath.path][file].crc);
+                        query = query
+                            .Where((file) => !remoteModFiles[syncPath.path][file].nosync)
+                            .Where((file) => remoteModFiles[syncPath.path][file].crc != localModFiles[syncPath.path][file].crc);
 
                         return new KeyValuePair<string, List<string>>(syncPath.path, query.ToList());
                     }
@@ -85,7 +92,6 @@ namespace ModSync
                 .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
         }
 
-        [CanBeNull]
         public static Dictionary<string, Dictionary<string, ModFile>> HashLocalFiles(string basePath, List<SyncPath> syncPaths, List<SyncPath> enabledSyncPaths)
         {
             return syncPaths

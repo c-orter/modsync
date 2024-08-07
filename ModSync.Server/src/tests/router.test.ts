@@ -14,7 +14,7 @@ import type { ILogger } from "@spt/models/spt/utils/ILogger";
 import type { ServerResponse } from "node:http";
 import { HttpError } from "../utility";
 
-vi.mock("node:fs", () => ({ ...fs, default: fs }));
+vi.mock("node:fs", async () => (await vi.importActual("memfs")).fs);
 
 describe("router", () => {
 	const config = new Config(
@@ -24,21 +24,18 @@ describe("router", () => {
 				enabled: true,
 				enforced: false,
 				silent: false,
-				restartRequired: true,
 			},
 			{
 				path: "user/mods",
 				enabled: true,
 				enforced: false,
 				silent: false,
-				restartRequired: false,
 			},
 			{
 				path: "user/cache",
 				enabled: false,
 				enforced: false,
 				silent: false,
-				restartRequired: false,
 			},
 		],
 		["plugins/**/node_modules"],
@@ -89,21 +86,18 @@ describe("router", () => {
 						enabled: true,
 						enforced: false,
 						silent: false,
-						restartRequired: true,
 					},
 					{
 						path: "user\\mods",
 						enabled: true,
 						enforced: false,
 						silent: false,
-						restartRequired: false,
 					},
 					{
 						path: "user\\cache",
 						enabled: false,
 						enforced: false,
 						silent: false,
-						restartRequired: false,
 					},
 				]),
 			);
@@ -135,7 +129,7 @@ describe("router", () => {
 			},
 		};
 
-		let res: ServerResponse;
+		let res = mock<ServerResponse>();
 		beforeEach(() => {
 			vol.reset();
 			vol.fromNestedJSON(directoryStructure);
@@ -146,16 +140,7 @@ describe("router", () => {
 		it("should return hashes", () => {
 			router.getHashes(res, mock<RegExpMatchArray>());
 
-			expect(res.end).toHaveBeenCalledWith(
-				JSON.stringify({
-					plugins: {
-						"plugins\\file1.dll": {crc: 1338358949},
-						"plugins\\OtherMod\\other_mod.dll": {crc: 2471037616},
-					},
-					"user\\mods": {},
-					"user\\cache": {},
-				}),
-			);
+			expect(res.end.mock.calls).toMatchSnapshot();
 		});
 	});
 

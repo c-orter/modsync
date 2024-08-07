@@ -56,9 +56,7 @@ export class Router {
 	public getHashes(res: ServerResponse, _: RegExpMatchArray) {
 		res.setHeader("Content-Type", "application/json");
 		res.writeHead(200, "OK");
-		res.end(
-			JSON.stringify(this.syncUtil.hashModFiles(this.config.syncPaths)),
-		);
+		res.end(JSON.stringify(this.syncUtil.hashModFiles(this.config.syncPaths)));
 	}
 
 	/**
@@ -118,9 +116,10 @@ export class Router {
 
 			throw new HttpError(404, "Corter-ModSync: Unknown route");
 		} catch (e) {
-			this.logger.error(
-				`Corter-ModSync: Error when handling [${req.method} ${req.url}]:\n${e}`,
-			);
+			if (e instanceof Error)
+				this.logger.error(
+					`Corter-ModSync: Error when handling [${req.method} ${req.url}]:\n${e.message}\n${e.stack}`,
+				);
 
 			if (e instanceof HttpError) {
 				res.writeHead(e.code, e.codeMessage);
