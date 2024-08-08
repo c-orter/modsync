@@ -21,7 +21,12 @@ namespace ModSync
                     (syncPath) =>
                         new KeyValuePair<string, List<string>>(
                             syncPath.path,
-                            remoteModFiles[syncPath.path].Keys.Except(localModFiles[syncPath.path].Keys, StringComparer.OrdinalIgnoreCase).ToList()
+                            remoteModFiles[syncPath.path]
+                                .Keys.Except(
+                                    localModFiles.TryGetValue(syncPath.path, out var modFiles) ? modFiles.Keys : new List<string>(),
+                                    StringComparer.OrdinalIgnoreCase
+                                )
+                                .ToList()
                         )
                 )
                 .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
@@ -38,19 +43,22 @@ namespace ModSync
                 .Select(
                     (syncPath) =>
                     {
-                        var query = remoteModFiles[syncPath.path].Keys.Intersect(localModFiles[syncPath.path].Keys, StringComparer.OrdinalIgnoreCase);
+                        if (!localModFiles.TryGetValue(syncPath.path, out var localPathFiles))
+                            return new KeyValuePair<string, List<string>>(syncPath.path, []);
+
+                        var query = remoteModFiles[syncPath.path].Keys.Intersect(localPathFiles.Keys, StringComparer.OrdinalIgnoreCase);
 
                         if (!syncPath.enforced)
                             query = query
-                                .Where((file) => !localModFiles[syncPath.path][file].nosync)
+                                .Where((file) => !localPathFiles[file].nosync)
                                 .Where(
                                     (file) =>
-                                        !previousRemoteModFiles.TryGetValue(syncPath.path, out var previousSyncPath)
-                                        || !previousSyncPath.TryGetValue(file, out var modFile)
+                                        !previousRemoteModFiles.TryGetValue(syncPath.path, out var previousPathFiles)
+                                        || !previousPathFiles.TryGetValue(file, out var modFile)
                                         || remoteModFiles[syncPath.path][file].crc != modFile.crc
                                 );
 
-                        query = query.Where((file) => remoteModFiles[syncPath.path][file].crc != localModFiles[syncPath.path][file].crc);
+                        query = query.Where((file) => remoteModFiles[syncPath.path][file].crc != localPathFiles[file].crc);
 
                         return new KeyValuePair<string, List<string>>(syncPath.path, query.ToList());
                     }
@@ -69,14 +77,17 @@ namespace ModSync
                 .Select(
                     (syncPath) =>
                     {
+                        if (!localModFiles.TryGetValue(syncPath.path, out var localPathFiles))
+                            return new KeyValuePair<string, List<string>>(syncPath.path, []);
+
                         IEnumerable<string> query;
                         if (syncPath.enforced)
-                            query = localModFiles[syncPath.path].Keys.Except(remoteModFiles[syncPath.path].Keys, StringComparer.OrdinalIgnoreCase);
+                            query = localPathFiles.Keys.Except(remoteModFiles[syncPath.path].Keys, StringComparer.OrdinalIgnoreCase);
                         else
-                            query = !previousRemoteModFiles.TryGetValue(syncPath.path, out var file)
+                            query = !previousRemoteModFiles.TryGetValue(syncPath.path, out var previousPathFiles)
                                 ? []
-                                : file
-                                    .Keys.Intersect(localModFiles[syncPath.path].Keys, StringComparer.OrdinalIgnoreCase)
+                                : previousPathFiles
+                                    .Keys.Intersect(localPathFiles.Keys, StringComparer.OrdinalIgnoreCase)
                                     .Except(remoteModFiles[syncPath.path].Keys, StringComparer.OrdinalIgnoreCase);
 
                         return new KeyValuePair<string, List<string>>(syncPath.path, query.ToList());
@@ -102,8 +113,8 @@ namespace ModSync
                                 .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
                         else if (Directory.Exists(path)) // Sync Path is a directory
                         {
-                            modFiles = Utility
-                                .GetFilesInDir(path)
+                            modFiles = Directory
+                                .GetFiles(path, "*", SearchOption.AllDirectories)
                                 .AsParallel()
                                 .Where((file) => file != @"BepInEx\patchers\Corter-ModSync-Patcher.dll")
                                 .Where((file) => !file.EndsWith(".nosync") && !file.EndsWith(".nosync.txt"))
@@ -122,7 +133,7 @@ namespace ModSync
             var data = VFS.ReadFile(file);
             var relativePath = file.Replace($"{basePath}\\", "");
 
-            return new KeyValuePair<string, ModFile>(relativePath, new ModFile(Crc32.Compute(data), !enabled || Utility.NoSyncInTree(basePath, relativePath)));
+            return new KeyValuePair<string, ModFile>(relativePath, new ModFile(Crc32.Compute(data), !enabled || NoSyncInTree(basePath, relativePath)));
         }
 
         public static void CompareModFiles(
@@ -138,6 +149,30 @@ namespace ModSync
             addedFiles = GetAddedFiles(syncPaths, localModFiles, remoteModFiles);
             updatedFiles = GetUpdatedFiles(syncPaths, localModFiles, remoteModFiles, previousSync);
             removedFiles = GetRemovedFiles(syncPaths, localModFiles, remoteModFiles, previousSync);
+        }
+
+        public static bool NoSyncInTree(string baseDir, string path)
+        {
+            if (path == baseDir || path == string.Empty)
+                return false;
+
+            var file = Path.Combine(baseDir, path);
+            if (File.Exists(file))
+            {
+                if (VFS.Exists($"{file}.nosync") || VFS.Exists($"{file}.nosync.txt"))
+                    return true;
+            }
+            else if (Directory.Exists(Path.Combine(baseDir, path)))
+            {
+                var noSyncPath = Path.Combine(baseDir, path, ".nosync");
+
+                if (VFS.Exists(noSyncPath) || VFS.Exists($"{noSyncPath}.txt"))
+                    return true;
+            }
+            else
+                return false;
+
+            return NoSyncInTree(baseDir, Path.GetDirectoryName(path));
         }
     }
 }

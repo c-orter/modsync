@@ -1,6 +1,10 @@
 ﻿const { config, rm, mkdir, cp, pushd, popd, exec } = require("shelljs");
 const packageJson = require("../package.json");
 
+let configuration = "Release";
+if (process.argv.includes("--debug"))
+    configuration = "Debug";
+
 rm("-rf", "../dist");
 mkdir("-p", "../dist/user/mods/Corter-ModSync/src");
 mkdir("-p", "../dist/BepInEx/plugins");
@@ -9,18 +13,15 @@ cp("package.json", "../dist/user/mods/Corter-ModSync/");
 cp("src/*", "../dist/user/mods/Corter-ModSync/src");
 
 pushd("-q", "../");
-exec("dotnet build --configuration Release");
+exec(`MSBuild.exe -p:Configuration=${configuration} /p:IncludeNativeLibrariesForSelfExtract=true -p:PublishSingleFile=true /verbosity:minimal`);
 popd("-q");
 
-cp("../ModSync/bin/Release/Corter-ModSync.dll", "../dist/BepInEx/plugins/");
-cp(
-	"../ModSync.PrePatcher/bin/Release/Corter-ModSync-Patcher.dll",
-	"../dist/BepInEx/patchers/",
-);
+cp(`../ModSync/bin/${configuration}/Corter-ModSync.dll`, "../dist/BepInEx/plugins/");
+cp(`../ModSync.Updater/bin/${configuration}/ModSync.Updater.exe`, "../dist/")
 
 pushd("-q", "../dist");
 config.silent = true;
 exec(`7z a -tzip Corter-ModSync-Server-v${packageJson.version}.zip user/`);
-exec(`7z a -tzip Corter-ModSync-Client-v${packageJson.version}.zip BepInEx/`);
+exec(`7z a -tzip Corter-ModSync-Client-v${packageJson.version}.zip BepInEx/ ModSync.Updater.exe`);
 config.silent = false;
 popd("-q");

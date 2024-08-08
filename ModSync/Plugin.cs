@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -16,26 +17,42 @@ using UnityEngine;
 
 namespace ModSync
 {
+    using SyncPathFileList = Dictionary<string, List<string>>;
+    using SyncPathModFiles = Dictionary<string, Dictionary<string, ModFile>>;
+
     [BepInPlugin("corter.modsync", "Corter ModSync", "0.7.0")]
     public class Plugin : BaseUnityPlugin
     {
+        private static readonly string MODSYNC_DIR = Path.Combine(Directory.GetCurrentDirectory(), "ModSync_Data");
+        private static readonly string PENDING_UPDATES_DIR = Path.Combine(MODSYNC_DIR, "PendingUpdates");
+        private static readonly string PREVIOUS_SYNC_PATH = Path.Combine(MODSYNC_DIR, "PreviousSync.json");
+        private static readonly string REMOVED_FILES_PATH = Path.Combine(MODSYNC_DIR, "RemovedFiles.json");
+
         // Configuration
         private Dictionary<string, ConfigEntry<bool>> configSyncPathToggles;
         private ConfigEntry<bool> configDeleteRemovedFiles;
 
-        private Persist persist;
         private SyncPath[] syncPaths = [];
-        private Dictionary<string, Dictionary<string, ModFile>> remoteModFiles = [];
-        private Dictionary<string, List<string>> addedFiles = [];
-        private Dictionary<string, List<string>> updatedFiles = [];
-        private Dictionary<string, List<string>> removedFiles = [];
+        private SyncPathModFiles remoteModFiles = [];
+        private SyncPathFileList addedFiles = [];
+        private SyncPathFileList updatedFiles = [];
+        private SyncPathFileList removedFiles = [];
+
+        private SyncPathModFiles previousSync = [];
 
         private List<Task> downloadTasks = [];
 
-        private int UpdateCount => addedFiles.Count + updatedFiles.Count + removedFiles.Count;
+        private int UpdateCount =>
+            EnabledSyncPaths
+                .Select(
+                    (syncPath) =>
+                        addedFiles[syncPath.path].Count
+                        + updatedFiles[syncPath.path].Count
+                        + (configDeleteRemovedFiles.Value ? removedFiles[syncPath.path].Count : 0)
+                )
+                .Sum();
         private bool pluginFinished;
         private int downloadCount;
-        private string downloadDir = string.Empty;
 
         private readonly Server server = new();
         private CancellationTokenSource cts = new();
@@ -44,27 +61,24 @@ namespace ModSync
 
         private List<SyncPath> EnabledSyncPaths => syncPaths.Where((syncPath) => configSyncPathToggles[syncPath.path].Value).ToList();
 
-        private void AnalyzeModFiles(Dictionary<string, Dictionary<string, ModFile>> localModFiles)
+        private void AnalyzeModFiles(SyncPathModFiles localModFiles)
         {
-            remoteModFiles = server
-                .GetRemoteModFileHashes()
-                .Where((kvp) => EnabledSyncPaths.Any((syncPath) => syncPath.path == kvp.Key))
-                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.OrdinalIgnoreCase);
+            remoteModFiles = server.GetRemoteModFileHashes().ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.OrdinalIgnoreCase);
 
-            Sync.CompareModFiles([.. syncPaths], localModFiles, remoteModFiles, persist.previousSync, out addedFiles, out updatedFiles, out removedFiles);
+            Sync.CompareModFiles(EnabledSyncPaths, localModFiles, remoteModFiles, previousSync, out addedFiles, out updatedFiles, out removedFiles);
 
             Logger.LogInfo($"Found {UpdateCount} files to download.");
-            Logger.LogInfo($"- {addedFiles.Count} added");
-            Logger.LogInfo($"- {updatedFiles.Count} updated");
+            Logger.LogInfo($"- {addedFiles.SelectMany(path => path.Value).Count()} added");
+            Logger.LogInfo($"- {updatedFiles.SelectMany(path => path.Value).Count()} updated");
             if (configDeleteRemovedFiles.Value)
-                Logger.LogInfo($"- {removedFiles.Count} removed");
+                Logger.LogInfo($"- {removedFiles.SelectMany(path => path.Value).Count()} removed");
             else
                 removedFiles.Clear();
 
             if (UpdateCount > 0)
                 updateWindow.Show();
             else
-                WriteModSyncFile();
+                WriteModSyncData();
         }
 
         private void SkipUpdatingMods()
@@ -76,7 +90,9 @@ namespace ModSync
         private async Task SyncMods()
         {
             updateWindow.Hide();
-            downloadDir = Utility.GetTemporaryDirectory();
+
+            if (!Directory.Exists(PENDING_UPDATES_DIR))
+                Directory.CreateDirectory(PENDING_UPDATES_DIR);
 
             downloadCount = 0;
             progressWindow.Show();
@@ -86,7 +102,7 @@ namespace ModSync
             downloadTasks = addedFiles
                 .SelectMany((kvp) => kvp.Value)
                 .Union(updatedFiles.SelectMany((kvp) => kvp.Value))
-                .Select((file) => server.DownloadFile(file, downloadDir, limiter, cts.Token))
+                .Select((file) => server.DownloadFile(file, PENDING_UPDATES_DIR, limiter, cts.Token))
                 .ToList();
 
             while (downloadTasks.Count > 0 && !cts.IsCancellationRequested)
@@ -116,7 +132,7 @@ namespace ModSync
             progressWindow.Hide();
             if (!cts.IsCancellationRequested)
             {
-                WriteModSyncFile();
+                WriteModSyncData();
                 restartWindow.Show();
             }
         }
@@ -128,36 +144,30 @@ namespace ModSync
 
             await Task.WhenAll(downloadTasks);
 
-            Directory.Delete(downloadDir, true);
-            downloadDir = string.Empty;
-
+            Directory.Delete(PENDING_UPDATES_DIR, true);
             pluginFinished = true;
         }
 
-        private void WriteModSyncFile()
+        private void WriteModSyncData()
         {
-            Persist newPersist =
-                new()
-                {
-                    previousSync = remoteModFiles,
-                    downloadDir = downloadDir,
-                    filesToDelete = configDeleteRemovedFiles.Value ? removedFiles.SelectMany((kvp) => kvp.Value).ToList() : [],
-                    version = Persist.LATEST_VERSION
-                };
+            VFS.WriteTextFile(PREVIOUS_SYNC_PATH, Json.Serialize(remoteModFiles));
+            if (configDeleteRemovedFiles.Value && EnabledSyncPaths.Any((syncPath) => removedFiles[syncPath.path].Any()))
+                VFS.WriteTextFile(REMOVED_FILES_PATH, Json.Serialize(removedFiles.SelectMany(kvp => kvp.Value).ToList()));
+        }
 
-            VFS.WriteTextFile(Path.Combine(Directory.GetCurrentDirectory(), ".modsync"), Json.Serialize(newPersist));
+        private void StartUpdaterProcess()
+        {
+            Process.Start(Path.Combine(Directory.GetCurrentDirectory(), "ModSync.Updater.exe"), Process.GetCurrentProcess().Id.ToString());
+            Application.Quit();
         }
 
         private void StartPlugin()
         {
             cts = new();
-            if (persist.downloadDir != string.Empty || persist.filesToDelete.Count != 0)
-            {
-                Chainloader.DependencyErrors.Add(
-                    $"Could not load {Info.Metadata.Name} due to failed previous update. Please ensure the PrePatcher is properly installed to 'BepInEx/patchers/Corter-ModSync-Patcher.dll' and try again."
+            if (Directory.Exists(PENDING_UPDATES_DIR) || File.Exists(REMOVED_FILES_PATH))
+                Logger.LogWarning(
+                    "ModSync found previous update. Updater may have failed, check the 'ModSync_Data/Updater.log' for details. Attempting to continue."
                 );
-                return;
-            }
 
             try
             {
@@ -257,27 +267,14 @@ namespace ModSync
                 "Should the mod delete files that have been removed from the server?"
             );
 
-            var persistPath = Path.Combine(Directory.GetCurrentDirectory(), ".modsync");
-            try
-            {
-                persist = VFS.Exists(persistPath) ? Json.Deserialize<Persist>(File.ReadAllText(persistPath)) : new();
-                Logger.LogInfo($"Parsed .modsync file with version {persist.version}");
-                if (persist.version < Persist.LATEST_VERSION)
-                {
-                    Logger.LogInfo(".modsync file format has been updated. Ignoring old file...");
-                    persist = new Persist { version = Persist.LATEST_VERSION };
-                }
+            previousSync = VFS.Exists(PREVIOUS_SYNC_PATH) ? Json.Deserialize<SyncPathModFiles>(VFS.ReadTextFile(PREVIOUS_SYNC_PATH)) : [];
 
-                persist.previousSync = persist.previousSync.ToDictionary(item => item.Key, item => item.Value, StringComparer.OrdinalIgnoreCase);
-            }
-            catch (Exception e)
+            if (previousSync == null)
             {
-                Logger.LogError("Error parsing .modsync file.");
-                Logger.LogError(e);
-
                 Chainloader.DependencyErrors.Add(
-                    $"Could not load {Info.Metadata.Name} due to error loading .modsync file. If you haven't manually modified the file, please delete it to force a fresh sync and try again."
+                    $"Could not load {Info.Metadata.Name} due to malformed previous sync data. Please check ModSync_Data/PreviousSync.json for errors or delete it, and try again."
                 );
+                return;
             }
 
             StartPlugin();
@@ -288,7 +285,7 @@ namespace ModSync
             if (!Singleton<CommonUI>.Instantiated)
                 return;
 
-            restartWindow.Draw(Application.Quit);
+            restartWindow.Draw(StartUpdaterProcess);
             progressWindow.Draw(downloadCount, addedFiles.Count + updatedFiles.Count, () => Task.Run(CancelUpdatingMods));
             updateWindow.Draw(
                 addedFiles.SelectMany(kvp => kvp.Value).ToList(),

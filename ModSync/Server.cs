@@ -18,6 +18,9 @@ namespace ModSync
                 return;
 
             var downloadPath = Path.Combine(downloadDir, file);
+            if (file == "ModSync.Updater.exe")
+                downloadPath = Path.Combine(Directory.GetCurrentDirectory(), file);
+
             VFS.CreateDirectory(downloadPath.GetDirectory());
 
             var retryCount = 0;
