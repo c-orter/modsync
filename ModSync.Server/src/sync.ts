@@ -3,14 +3,12 @@ import path from "node:path";
 import crc32 from "buffer-crc32";
 import type { Config, SyncPath } from "./config";
 import { HttpError, winPath } from "./utility";
-import fs from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import type { ILogger } from "@spt/models/spt/utils/ILogger";
 
 type ModFile = {
 	crc: number;
-	// Not yet implemented
-	// required: boolean;
-	// silent: boolean
+	nosync: boolean;
 };
 
 export class SyncUtil {
@@ -20,57 +18,61 @@ export class SyncUtil {
 		private logger: ILogger,
 	) {}
 
-	private getFilesInDir(dir: string): string[] {
+	private getFilesInDir(dir: string): [string, boolean][] {
 		if (!this.vfs.exists(dir)) {
 			this.logger.warning(
 				`Corter-ModSync: Directory '${dir}' does not exist, will be ignored.`,
 			);
 			return [];
 		}
-		if (fs.statSync(dir).isFile()) return [dir];
+		if (statSync(dir).isFile())
+			return [
+				[
+					dir,
+					this.config.isExcluded(dir) ||
+						this.vfs.exists(path.join(dir, ".nosync")) ||
+						this.vfs.exists(path.join(dir, ".nosync.txt")),
+				],
+			];
 
-		if (
+		const nosyncDir =
+			this.config.isExcluded(dir) ||
 			this.vfs.exists(path.join(dir, ".nosync")) ||
-			this.vfs.exists(path.join(dir, ".nosync.txt"))
-		)
-			return [];
-
-		if (this.config.isExcluded(dir)) return [];
+			this.vfs.exists(path.join(dir, ".nosync.txt"));
 
 		return this.vfs
 			.getFiles(dir)
-			.filter((file) => !this.config.isExcluded(path.join(dir, file)))
 			.filter(
 				(file) => !file.endsWith(".nosync") && !file.endsWith(".nosync.txt"),
 			)
-			.filter(
-				(file) =>
-					!this.vfs.exists(`${path.join(dir, file)}.nosync`) &&
-					!this.vfs.exists(`${path.join(dir, file)}.nosync.txt`),
-			)
-			.map((file) => path.join(dir, file))
+			.map((file): [string, boolean] => [
+				path.join(dir, file),
+				nosyncDir ||
+					this.config.isExcluded(path.join(dir, file)) ||
+					this.vfs.exists(`${path.join(dir, file)}.nosync`) ||
+					this.vfs.exists(`${path.join(dir, file)}.nosync.txt`),
+			])
 			.concat(
 				this.vfs
 					.getDirs(dir)
-					.flatMap((subDir) => this.getFilesInDir(path.join(dir, subDir))),
+					.flatMap((subDir) => this.getFilesInDir(path.join(dir, subDir)))
+					.map(([child, nosync]): [string, boolean] => [
+						child,
+						nosyncDir || nosync,
+					]),
 			);
 	}
 
 	private buildModFile(
 		file: string,
-		// Not yet implemented
 		// biome-ignore lint/correctness/noEmptyPattern: <explanation>
-		{
-			/* required, silent */
-			/* required, silent */
-		}: Required<SyncPath>,
+		{}: Required<SyncPath>,
+		nosync: boolean,
 	): ModFile {
 		try {
 			return {
-				crc: crc32.unsigned(fs.readFileSync(file)),
-				// Not yet implemented
-				// required,
-				// silent,
+				nosync,
+				crc: nosync ? 0 : crc32.unsigned(readFileSync(file)),
 			};
 		} catch (e) {
 			throw new HttpError(500, `Corter-ModSync: Error reading '${file}'\n${e}`);
@@ -85,8 +87,11 @@ export class SyncUtil {
 				winPath(syncPath.path),
 				Object.fromEntries(
 					this.getFilesInDir(syncPath.path).map(
-						(file) =>
-							[winPath(file), this.buildModFile(file, syncPath)] as const,
+						([file, nosync]) =>
+							[
+								winPath(file),
+								this.buildModFile(file, syncPath, nosync),
+							] as const,
 					),
 				),
 			]),

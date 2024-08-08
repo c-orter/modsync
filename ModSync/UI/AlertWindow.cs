@@ -15,9 +15,6 @@ namespace ModSync.UI
 
         public void Draw(Action restartAction)
         {
-            if (!Active)
-                return;
-
             float screenWidth = Screen.width;
             float screenHeight = Screen.height;
 

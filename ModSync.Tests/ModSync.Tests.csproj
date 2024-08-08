@@ -67,26 +67,7 @@
     <Compile Include="TestUtils.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="IntegrationTests\RemoveSingleFile\local\.modsync" />
     <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="IntegrationTests\DoNotUpdateWhenLocalChanges\local\ModSync_Data\PreviousSync.json" />
-    <Content Include="IntegrationTests\DoNotUpdateWhenLocalChanges\local\SAIN.dll" />
-    <Content Include="IntegrationTests\DoNotUpdateWhenLocalChanges\remote\SAIN.dll" />
-    <Content Include="IntegrationTests\InitialEmptyManyFiles\remote\plugins\Corter-ModSync.dll" />
-    <Content Include="IntegrationTests\InitialEmptyManyFiles\remote\plugins\SAIN.dll" />
-    <Content Include="IntegrationTests\InitialEmptySingleFile\remote\SAIN.dll" />
-    <Content Include="IntegrationTests\MismatchedCases\local\ModSync_Data\PreviousSync.json" />
-    <Content Include="IntegrationTests\MismatchedCases\local\plugins\SAIN.dll" />
-    <Content Include="IntegrationTests\MismatchedCases\local\plugins\test.dll" />
-    <Content Include="IntegrationTests\MismatchedCases\remote\plugins\sain.dll" />
-    <Content Include="IntegrationTests\MismatchedCases\remote\plugins\TeSt.dll" />
-    <Content Include="IntegrationTests\RemoveSingleFile\local\ModSync_Data\PreviousSync.json" />
-    <Content Include="IntegrationTests\RemoveSingleFile\local\SAIN.dll" />
-    <Content Include="IntegrationTests\UpdateSingleFile\local\ModSync_Data\PreviousSync.json" />
-    <Content Include="IntegrationTests\UpdateSingleFile\local\SAIN.dll" />
-    <Content Include="IntegrationTests\UpdateSingleFile\remote\SAIN.dll" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="IntegrationTests\InitialEmptyManyFiles\local\" />

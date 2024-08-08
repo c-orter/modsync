@@ -14,11 +14,8 @@ namespace ModSync.UI
 
         public void Hide() => Active = false;
 
-        public void Draw(List<string> addedFiles, List<string> updatedFiles, List<string> removedFiles, Action onAccept, Action onDecline)
+        public void Draw(string updatesText, Action onAccept, Action onDecline)
         {
-            if (!Active)
-                return;
-
             float screenWidth = Screen.width;
             float screenHeight = Screen.height;
 
@@ -26,7 +23,7 @@ namespace ModSync.UI
             var windowHeight = 640f;
 
             GUILayout.BeginArea(new Rect((screenWidth - windowWidth) / 2f, (screenHeight - windowHeight) / 2f, windowWidth, windowHeight));
-            alertBox.Draw(new(800f, 640f), addedFiles, updatedFiles, removedFiles, onAccept, onDecline);
+            alertBox.Draw(new(800f, 640f), updatesText, onAccept, onDecline);
             GUILayout.EndArea();
         }
     }
@@ -39,7 +36,7 @@ namespace ModSync.UI
         private readonly int borderThickness = 2;
         private Vector2 scrollPosition = Vector2.zero;
 
-        public void Draw(Vector2 size, List<string> addedFiles, List<string> updatedFiles, List<string> removedFiles, Action onAccept, Action onDecline)
+        public void Draw(Vector2 size, string updatesText, Action onAccept, Action onDecline)
         {
             var borderRect = GUILayoutUtility.GetRect(size.x, size.y);
             DrawBorder(borderRect, borderThickness, Colors.Grey);
@@ -107,12 +104,7 @@ namespace ModSync.UI
                     focused = { background = Utility.GetTexture(Colors.Primary.SetAlpha(0.5f)) },
                 };
 
-            var lines =
-                addedFiles.Aggregate("", (str, file) => str + $"ADDED {file}\n")
-                + updatedFiles.Aggregate("", (str, file) => str + $"UPDATED {file}\n")
-                + removedFiles.Aggregate("", (str, file) => str + $"REMOVED {file}\n");
-
-            var scrollHeight = scrollStyle.CalcHeight(new GUIContent(lines), alertRect.width - 40f);
+            var scrollHeight = scrollStyle.CalcHeight(new GUIContent(updatesText), alertRect.width - 40f);
             GUI.DrawTexture(scrollRect, Utility.GetTexture(Color.black.SetAlpha(0.5f)), ScaleMode.StretchToFill, true, 0);
 
             var oldSkin = GUI.skin;
@@ -128,14 +120,7 @@ namespace ModSync.UI
                 scrollbarStyle
             );
             GUI.skin = oldSkin;
-            GUI.Label(new(16f, 16f, alertRect.width - 56f, scrollHeight), lines, scrollStyle);
-            // foreach (var change in addedFiles)
-            //     GUI.Label(new(20f, (lines++) * lineHeight, scrollRect.width - 20f, lineHeight), $"ADDED {change}", scrollStyle);
-            // foreach (var change in updatedFiles)
-            //     GUI.Label(new(20f, (lines++) * lineHeight, scrollRect.width - 20f, lineHeight), $"UPDATED {change}", scrollStyle);
-            // foreach (var change in removedFiles)
-            //     GUI.Label(new(20f, (lines++) * lineHeight, scrollRect.width - 20f, lineHeight), $"REMOVED {change}", scrollStyle);
-
+            GUI.Label(new(16f, 16f, alertRect.width - 56f, scrollHeight), updatesText, scrollStyle);
             GUI.EndScrollView();
 
             if (onDecline != null && declineButton.Draw(new(actionsRect.x, actionsRect.y, actionsRect.width / 2, actionsRect.height)))

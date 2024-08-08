@@ -16,9 +16,6 @@ namespace ModSync.UI
 
         public void Draw(int progressValue, int progressMax, Action cancelAction)
         {
-            if (!Active)
-                return;
-
             float screenWidth = Screen.width;
             float screenHeight = Screen.height;
 
@@ -47,8 +44,9 @@ namespace ModSync.UI
 
             GUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
-            if (cancelButton.Draw(new Vector2(196f, 48f)))
-                cancelAction();
+            if (cancelAction != null)
+                if (cancelButton.Draw(new Vector2(196f, 48f)))
+                    cancelAction();
             GUILayout.FlexibleSpace();
             GUILayout.EndHorizontal();
 

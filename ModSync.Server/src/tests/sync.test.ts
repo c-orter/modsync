@@ -8,7 +8,7 @@ import type { VFS as IVFS } from "@spt/utils/VFS";
 import type { ILogger } from "@spt/models/spt/utils/ILogger";
 import { mock } from "vitest-mock-extended";
 
-vi.mock("node:fs", () => ({ ...fs, default: fs }));
+vi.mock("node:fs", async () => (await vi.importActual("memfs")).fs);
 
 const directoryStructure = {
 	plugins: {
@@ -46,7 +46,6 @@ const config = new Config(
 			path: "plugins",
 			enabled: true,
 			enforced: false,
-			restartRequired: true,
 			silent: false,
 		},
 	],
@@ -84,14 +83,12 @@ describe("hashModFiles", () => {
 					path: "plugins",
 					enabled: true,
 					enforced: false,
-					restartRequired: true,
 					silent: false,
 				},
 				{
 					path: "user/mods",
 					enabled: true,
 					enforced: false,
-					restartRequired: false,
 					silent: false,
 				},
 			],
@@ -113,14 +110,12 @@ describe("hashModFiles", () => {
 					path: "plugins",
 					enabled: true,
 					enforced: false,
-					restartRequired: true,
 					silent: false,
 				},
 				{
 					path: "user/bananas",
 					enabled: true,
 					enforced: false,
-					restartRequired: false,
 					silent: false,
 				},
 			],
@@ -148,14 +143,12 @@ describe("hashModFiles", () => {
 					path: "plugins",
 					enabled: true,
 					enforced: false,
-					restartRequired: true,
 					silent: false,
 				},
 				{
 					path: "user/bananas",
 					enabled: true,
 					enforced: false,
-					restartRequired: false,
 					silent: false,
 				},
 			],

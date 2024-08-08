@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using JetBrains.Annotations;
 using SPT.Common.Utils;
 using SPT.Custom.Utils;
 
@@ -22,10 +21,8 @@ namespace ModSync
                         new KeyValuePair<string, List<string>>(
                             syncPath.path,
                             remoteModFiles[syncPath.path]
-                                .Keys.Except(
-                                    localModFiles.TryGetValue(syncPath.path, out var modFiles) ? modFiles.Keys : new List<string>(),
-                                    StringComparer.OrdinalIgnoreCase
-                                )
+                                .Keys.Where((file) => !remoteModFiles[syncPath.path][file].nosync)
+                                .Except(localModFiles.TryGetValue(syncPath.path, out var modFiles) ? modFiles.Keys : new List<string>(), StringComparer.OrdinalIgnoreCase)
                                 .ToList()
                         )
                 )
@@ -58,7 +55,9 @@ namespace ModSync
                                         || remoteModFiles[syncPath.path][file].crc != modFile.crc
                                 );
 
-                        query = query.Where((file) => remoteModFiles[syncPath.path][file].crc != localPathFiles[file].crc);
+                        query = query
+                            .Where((file) => !remoteModFiles[syncPath.path][file].nosync)
+                            .Where((file) => remoteModFiles[syncPath.path][file].crc != localPathFiles[file].crc);
 
                         return new KeyValuePair<string, List<string>>(syncPath.path, query.ToList());
                     }
@@ -96,7 +95,6 @@ namespace ModSync
                 .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
         }
 
-        [CanBeNull]
         public static Dictionary<string, Dictionary<string, ModFile>> HashLocalFiles(string basePath, List<SyncPath> syncPaths, List<SyncPath> enabledSyncPaths)
         {
             return syncPaths
