@@ -5,7 +5,7 @@
         <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
         <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
         <ProjectGuid>{D9F4A830-D8DF-4054-8200-11528FA04915}</ProjectGuid>
-        <OutputType>WinExe</OutputType>
+        <OutputType>Exe</OutputType>
         <RootNamespace>ModSync.Updater</RootNamespace>
         <AssemblyName>ModSync.Updater</AssemblyName>
         <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
