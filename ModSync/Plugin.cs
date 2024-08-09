@@ -35,11 +35,11 @@ namespace ModSync
 
         private SyncPath[] syncPaths = [];
         private SyncPathModFiles remoteModFiles = [];
+        private SyncPathModFiles previousSync = [];
+
         private SyncPathFileList addedFiles = [];
         private SyncPathFileList updatedFiles = [];
         private SyncPathFileList removedFiles = [];
-
-        private SyncPathModFiles previousSync = [];
 
         private List<Task> downloadTasks = [];
 
@@ -60,6 +60,7 @@ namespace ModSync
 
         public static new readonly ManualLogSource Logger = BepInEx.Logging.Logger.CreateLogSource("ModSync");
 
+        private bool IsDedicated => Chainloader.PluginInfos.ContainsKey("com.fika.dedicated");
         private List<SyncPath> EnabledSyncPaths => syncPaths.Where((syncPath) => configSyncPathToggles[syncPath.path].Value).ToList();
         private List<string> downloadFiles => EnabledSyncPaths.SelectMany((syncPath) => addedFiles[syncPath.path].Union(updatedFiles[syncPath.path])).ToList();
 
@@ -70,7 +71,8 @@ namespace ModSync
                     || (addedFiles[syncPath.path].Count == 0 && updatedFiles[syncPath.path].Count == 0 && removedFiles[syncPath.path].Count == 0)
             );
         private bool SilentMode =>
-            EnabledSyncPaths.All(
+            IsDedicated
+            || EnabledSyncPaths.All(
                 (syncPath) =>
                     syncPath.silent
                     || (addedFiles[syncPath.path].Count == 0 && updatedFiles[syncPath.path].Count == 0 && removedFiles[syncPath.path].Count == 0)
@@ -131,10 +133,12 @@ namespace ModSync
                 Directory.CreateDirectory(PENDING_UPDATES_DIR);
 
             downloadCount = 0;
-            progressWindow.Show();
+            if (!IsDedicated)
+                progressWindow.Show();
 
             var limiter = new SemaphoreSlim(8, maxCount: 8);
 
+            Logger.LogInfo($"Starting download of {filesToDownload.Count} files.");
             downloadTasks = filesToDownload.Select((file) => server.DownloadFile(file, PENDING_UPDATES_DIR, limiter, cts.Token)).ToList();
 
             while (downloadTasks.Count > 0 && !cts.IsCancellationRequested)
@@ -144,6 +148,7 @@ namespace ModSync
                 try
                 {
                     await task;
+                    Logger.LogInfo($"Finished downloading file ({downloadCount}/{filesToDownload.Count}).");
                 }
                 catch (Exception e)
                 {
@@ -152,7 +157,8 @@ namespace ModSync
 
                     cts.Cancel();
                     progressWindow.Hide();
-                    downloadErrorWindow.Show();
+                    if (!IsDedicated)
+                        downloadErrorWindow.Show();
                 }
 
                 downloadTasks.Remove(task);
@@ -160,12 +166,17 @@ namespace ModSync
             }
 
             downloadTasks.Clear();
-
             progressWindow.Hide();
+
+            Logger.LogInfo("Download of files finished.");
+
             if (!cts.IsCancellationRequested)
             {
                 WriteModSyncData();
-                restartWindow.Show();
+                if (!IsDedicated)
+                    restartWindow.Show();
+                else
+                    StartUpdaterProcess();
             }
         }
 
@@ -191,7 +202,21 @@ namespace ModSync
         {
             List<string> options = [];
 
-            Process.Start(UPDATER_PATH, $"{string.Join(" ", options)} {Process.GetCurrentProcess().Id}");
+            if (IsDedicated)
+                options.Add("--silent");
+
+            Logger.LogInfo($"Starting Updater with arguments {string.Join(" ", options)} {Process.GetCurrentProcess().Id}");
+            var updaterStartInfo = new ProcessStartInfo()
+            {
+                FileName = UPDATER_PATH,
+                Arguments = string.Join(" ", options) + " " + Process.GetCurrentProcess().Id,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+
+            var updaterProcess = new Process() { StartInfo = updaterStartInfo };
+
+            updaterProcess.Start();
             Application.Quit();
         }
 
