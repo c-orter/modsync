@@ -82,13 +82,30 @@ namespace ModSync.Updater
 #pragma warning disable CS0618 // Need to access JSON dll from Tarkov files
             AppDomain.CurrentDomain.AppendPrivatePath(Path.Combine(Directory.GetCurrentDirectory(), "EscapeFromTarkov_Data", "Managed"));
 #pragma warning restore CS0618
+
+            var options = args.Where((arg) => arg.StartsWith("--")).ToList();
+            var positional = args.Except(options);
+
+            var silent = options.Contains("--silent");
+            var pidArg = positional.Last();
+
+            if (!Directory.Exists(MODSYNC_DIR))
+            {
+                Console.WriteLine("[Corter-ModSync Updater]: Error: ModSync_Data directory not found. Ensure you've run the BepInEx plugin first!");
+                if (!silent)
+                    MessageBox.Show(
+                        @"Error: ModSync_Data directory not found. Ensure you've run the BepInEx plugin first!",
+                        @"Error running updater",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error
+                    );
+                return;
+            }
+
             if (File.Exists(Program.LOG_FILE))
                 File.Delete(LOG_FILE);
 
             File.Create(Program.LOG_FILE).Dispose();
-
-            var silent = args.Skip(1).Contains("--silent");
-            var pidArg = args.Last();
 
             if (!int.TryParse(pidArg, out var tarkovPid))
             {
