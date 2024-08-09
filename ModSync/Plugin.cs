@@ -323,14 +323,14 @@ namespace ModSync
 
             if (restartWindow.Active)
                 restartWindow.Draw(StartUpdaterProcess);
-            
+
             if (progressWindow.Active)
                 progressWindow.Draw(
                     downloadCount,
-                    addedFiles.Count + updatedFiles.Count,
+                    addedFiles.Values.Select((files) => files.Count).Sum() + updatedFiles.Values.Select((files) => files.Count).Sum(),
                     SilentMode || EnforcedMode ? null : () => Task.Run(CancelUpdatingMods)
                 );
-            
+
             if (updateWindow.Active)
             {
                 var optional = EnabledSyncPaths
