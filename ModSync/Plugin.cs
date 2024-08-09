@@ -341,6 +341,32 @@ namespace ModSync
             StartPlugin();
         }
 
+        private List<string> _optional;
+        private List<string> optional =>
+            _optional ??= EnabledSyncPaths
+                .Where((syncPath) => !syncPath.enforced)
+                .SelectMany(
+                    (syncPath) =>
+                        addedFiles[syncPath.path]
+                            .Select((file) => $"ADDED {file}")
+                            .Union(updatedFiles[syncPath.path].Select((file) => $"UPDATED {file}"))
+                            .Union(removedFiles[syncPath.path].Select((file) => $"REMOVED {file}"))
+                )
+                .ToList();
+
+        private List<string> _required;
+        private List<string> required =>
+            _required ??= EnabledSyncPaths
+                .Where((syncPath) => syncPath.enforced)
+                .SelectMany(
+                    (syncPath) =>
+                        addedFiles[syncPath.path]
+                            .Select((file) => $"ADDED {file}")
+                            .Union(updatedFiles[syncPath.path].Select((file) => $"UPDATED {file}"))
+                            .Union(removedFiles[syncPath.path].Select((file) => $"REMOVED {file}"))
+                )
+                .ToList();
+
         private void OnGUI()
         {
             if (!Singleton<CommonUI>.Instantiated)
@@ -353,33 +379,11 @@ namespace ModSync
                 progressWindow.Draw(
                     downloadCount,
                     addedFiles.Values.Select((files) => files.Count).Sum() + updatedFiles.Values.Select((files) => files.Count).Sum(),
-                    SilentMode || EnforcedMode ? null : () => Task.Run(CancelUpdatingMods)
+                    required.Any() ? null : () => Task.Run(CancelUpdatingMods)
                 );
 
             if (updateWindow.Active)
             {
-                var optional = EnabledSyncPaths
-                    .Where((syncPath) => !syncPath.enforced)
-                    .SelectMany(
-                        (syncPath) =>
-                            addedFiles[syncPath.path]
-                                .Select((file) => $"ADDED {file}")
-                                .Union(updatedFiles[syncPath.path].Select((file) => $"UPDATED {file}"))
-                                .Union(removedFiles[syncPath.path].Select((file) => $"REMOVED {file}"))
-                    )
-                    .ToList();
-
-                var required = EnabledSyncPaths
-                    .Where((syncPath) => syncPath.enforced)
-                    .SelectMany(
-                        (syncPath) =>
-                            addedFiles[syncPath.path]
-                                .Select((file) => $"ADDED {file}")
-                                .Union(updatedFiles[syncPath.path].Select((file) => $"UPDATED {file}"))
-                                .Union(removedFiles[syncPath.path].Select((file) => $"REMOVED {file}"))
-                    )
-                    .ToList();
-
                 updateWindow.Draw(
                     (optional.Any() ? string.Join("\n", optional) : "")
                         + (optional.Any() && required.Any() ? "\n\n" : "")
