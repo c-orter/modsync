@@ -22,7 +22,10 @@ namespace ModSync
                             syncPath.path,
                             remoteModFiles[syncPath.path]
                                 .Keys.Where((file) => !remoteModFiles[syncPath.path][file].nosync)
-                                .Except(localModFiles.TryGetValue(syncPath.path, out var modFiles) ? modFiles.Keys : new List<string>(), StringComparer.OrdinalIgnoreCase)
+                                .Except(
+                                    localModFiles.TryGetValue(syncPath.path, out var modFiles) ? modFiles.Keys : new List<string>(),
+                                    StringComparer.OrdinalIgnoreCase
+                                )
                                 .ToList()
                         )
                 )
