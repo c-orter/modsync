@@ -125,7 +125,17 @@ namespace ModSync.UI
 
             if (onDecline != null && declineButton.Draw(new(actionsRect.x, actionsRect.y, actionsRect.width / 2, actionsRect.height)))
                 onDecline();
-            if (onAccept != null && acceptButton.Draw(new(actionsRect.x + actionsRect.width / 2, actionsRect.y, actionsRect.width / 2, actionsRect.height)))
+            if (
+                onAccept != null
+                && acceptButton.Draw(
+                    new(
+                        actionsRect.x + (onDecline == null ? 0 : actionsRect.width / 2),
+                        actionsRect.y,
+                        (onDecline == null ? actionsRect.width : actionsRect.width / 2),
+                        actionsRect.height
+                    )
+                )
+            )
                 onAccept();
         }
     }

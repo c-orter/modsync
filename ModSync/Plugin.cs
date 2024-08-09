@@ -368,6 +368,7 @@ namespace ModSync
                                 .Union(removedFiles[syncPath.path].Select((file) => $"REMOVED {file}"))
                     )
                     .ToList();
+
                 var required = EnabledSyncPaths
                     .Where((syncPath) => syncPath.enforced)
                     .SelectMany(
@@ -380,11 +381,11 @@ namespace ModSync
                     .ToList();
 
                 updateWindow.Draw(
-                    optional.Any() && required.Any()
-                        ? $"{string.Join("\n", optional)}\n\n[Enforced]\n{string.Join("\n", required)}"
-                        : string.Join("\n", optional.Union(required)),
+                    (optional.Any() ? string.Join("\n", optional) : "")
+                        + (optional.Any() && required.Any() ? "\n\n" : "")
+                        + (required.Any() ? "[Enforced]\n" + string.Join("\n", required) : ""),
                     () => Task.Run(() => SyncMods(downloadFiles)),
-                    SkipUpdatingMods
+                    required.Any() && !optional.Any() ? null : SkipUpdatingMods
                 );
             }
 
