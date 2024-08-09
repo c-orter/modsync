@@ -9,7 +9,8 @@ using SPT.Common.Http;
 using SPT.Common.Utils;
 
 namespace ModSync;
-public class Server
+
+public class Server(Version pluginVersion)
 {
     public async Task DownloadFile(string file, string downloadDir, SemaphoreSlim limiter, CancellationToken cancellationToken)
     {
@@ -62,12 +63,12 @@ public class Server
 
     public List<SyncPath> GetModSyncPaths()
     {
-        return Json.Deserialize<List<SyncPath>>(RequestHandler.GetJson("/modsync/paths"));
+        return Json.Deserialize<List<SyncPath>>(RequestHandler.GetJson($"/modsync/v{pluginVersion}/paths"));
     }
 
     public Dictionary<string, Dictionary<string, ModFile>> GetRemoteModFileHashes()
     {
-        return Json.Deserialize<Dictionary<string, Dictionary<string, ModFile>>>(RequestHandler.GetJson("/modsync/hashes"))
+        return Json.Deserialize<Dictionary<string, Dictionary<string, ModFile>>>(RequestHandler.GetJson($"/modsync/v{pluginVersion}/hashes"))
             .ToDictionary(
                 item => item.Key,
                 item => item.Value.ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.OrdinalIgnoreCase),

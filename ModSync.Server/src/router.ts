@@ -10,6 +10,20 @@ import type { ILogger } from "@spt/models/spt/utils/ILogger";
 import type { PreSptModLoader } from "@spt/loaders/PreSptModLoader";
 import { statSync } from "node:fs";
 
+const FALLBACK_SYNCPATHS: Record<string, any> = {
+	undefined: [
+		"BepInEx\\plugins\\Corter-ModSync.dll",
+		"ModSync.Updater.exe",
+	]
+}
+
+const FALLBACK_HASHES: Record<string, any> = {
+	undefined: {
+		"BepInEx\\plugins\\Corter-ModSync.dll": { crc: 999999999 },
+		"ModSync.Updater.exe": { crc: 999999999 }
+	}
+}
+	
 export class Router {
 	constructor(
 		private config: Config,
@@ -20,24 +34,33 @@ export class Router {
 		private logger: ILogger,
 	) {}
 
+	get packageJson() {
+		const modPath = this.modImporter.getModPath("Corter-ModSync");
+		return JSON.parse(
+			this.vfs.readFile(path.join(modPath, "package.json")),
+		);
+	}
+	
 	/**
 	 * @internal
 	 */
 	public getServerVersion(res: ServerResponse, _: RegExpMatchArray) {
-		const modPath = this.modImporter.getModPath("Corter-ModSync");
-		const packageJson = JSON.parse(
-			this.vfs.readFile(path.join(modPath, "package.json")),
-		);
-
 		res.setHeader("Content-Type", "application/json");
 		res.writeHead(200, "OK");
-		res.end(JSON.stringify(packageJson.version));
+		res.end(JSON.stringify(this.packageJson.version));
 	}
 
 	/**
 	 * @internal
 	 */
-	public getSyncPaths(res: ServerResponse, _: RegExpMatchArray) {
+	public getSyncPaths(res: ServerResponse, matches: RegExpMatchArray) {
+		if (matches[1] in FALLBACK_SYNCPATHS) {
+			res.setHeader("Content-Type", "application/json");
+			res.writeHead(200, "OK");
+			res.end(JSON.stringify(FALLBACK_SYNCPATHS[matches[1]]));
+			return;
+		}
+		
 		res.setHeader("Content-Type", "application/json");
 		res.writeHead(200, "OK");
 		res.end(
@@ -53,7 +76,15 @@ export class Router {
 	/**
 	 * @internal
 	 */
-	public getHashes(res: ServerResponse, _: RegExpMatchArray) {
+	public getHashes(res: ServerResponse, matches: RegExpMatchArray) {
+		if (matches[1] in FALLBACK_HASHES) {
+			res.setHeader("Content-Type", "application/json");
+			res.writeHead(200, "OK");
+			res.end(JSON.stringify(FALLBACK_HASHES[matches[1]]));
+			return;
+		}
+		
+		
 		res.setHeader("Content-Type", "application/json");
 		res.writeHead(200, "OK");
 		res.end(JSON.stringify(this.syncUtil.hashModFiles(this.config.syncPaths)));
@@ -92,14 +123,14 @@ export class Router {
 		const routeTable = [
 			{
 				route: glob("/modsync/version"),
-				handler: this.getServerVersion.bind(this),
+				handler: this.getServerVersion.bind(this)
 			},
 			{
-				route: glob("/modsync/paths"),
+				route: glob("/modsync(/v*)?/paths"),
 				handler: this.getSyncPaths.bind(this),
 			},
 			{
-				route: glob("/modsync/hashes"),
+				route: glob("/modsync(/v*)?/hashes"),
 				handler: this.getHashes.bind(this),
 			},
 			{

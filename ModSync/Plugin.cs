@@ -47,7 +47,7 @@ namespace ModSync
         private int downloadCount;
         private int totalDownloadCount;
 
-        private readonly Server server = new();
+        private Server server;
         private CancellationTokenSource cts = new();
 
         public static new readonly ManualLogSource Logger = BepInEx.Logging.Logger.CreateLogSource("ModSync");
@@ -361,6 +361,8 @@ namespace ModSync
                     ConsoleScreen.Log($"Found {UpdateCount} available updates.");
                 }
             );
+
+            server = new Server(Info.Metadata.Version);
 
             configDeleteRemovedFiles = Config.Bind(
                 "General",
