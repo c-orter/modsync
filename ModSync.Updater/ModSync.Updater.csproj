@@ -75,12 +75,7 @@
             <AutoGen>True</AutoGen>
             <DependentUpon>Resources.resx</DependentUpon>
         </Compile>
-        <None Include="Corter Signing Key.snk" />
-        <None Include="homemade_2_akX_icon.ico" />
         <None Include="homemade_v3.ico" />
-        <None Include="ModSync.Updater.ico" />
-        <None Include="ModSync.Updater.Icon.ico" />
-        <None Include="ModSync.Updater.Icon.jpeg" />
         <None Include="packages.config" />
         <None Include="Properties\Settings.settings">
             <Generator>SettingsSingleFileGenerator</Generator>
