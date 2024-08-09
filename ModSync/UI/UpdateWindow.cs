@@ -1,11 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 namespace ModSync.UI
 {
-    public class UpdateWindow(string title, string message, string continueText = "CONTINUE", string cancelText = "CANCEL")
+    public class UpdateWindow(string title, string message, string continueText = "CONTINUE", string cancelText = "SKIP UPDATE")
     {
         private readonly UpdateBox alertBox = new(title, message, continueText, cancelText);
         public bool Active { get; private set; }
@@ -28,10 +26,13 @@ namespace ModSync.UI
         }
     }
 
-    internal class UpdateBox(string title, string message, string continueText = "CONTINUE", string cancelText = "CANCEL") : Bordered
+    internal class UpdateBox(string title, string message, string continueText, string cancelText) : Bordered
     {
         private readonly UpdateButton acceptButton = new(continueText, Colors.Primary, Colors.PrimaryLight, Colors.Grey, Colors.PrimaryDark);
-        private readonly UpdateButton declineButton = new(cancelText, Colors.Secondary, Colors.SecondaryLight, Colors.Grey, Colors.SecondaryDark);
+        private readonly UpdateButton declineButton =
+            new(cancelText, Colors.Secondary, Colors.SecondaryLight, Colors.Grey, Colors.SecondaryDark, "Enforced updates will still be downloaded.");
+
+        private readonly UpdateButtonTooltip updateButtonTooltip = new();
 
         private readonly int borderThickness = 2;
         private Vector2 scrollPosition = Vector2.zero;
@@ -137,10 +138,13 @@ namespace ModSync.UI
                 )
             )
                 onAccept();
+
+            var tooltipRect = new Rect(Event.current.mousePosition.x + 2f, Event.current.mousePosition.y - 20f, 275f, 20f);
+            updateButtonTooltip.Draw(tooltipRect, GUI.tooltip);
         }
     }
 
-    internal class UpdateButton(string text, Color normalColor, Color hoverColor, Color activeColor, Color borderColor) : Bordered
+    internal class UpdateButton(string text, Color normalColor, Color hoverColor, Color activeColor, Color borderColor, string tooltip = null) : Bordered
     {
         private const int borderThickness = 2;
         private bool active;
@@ -170,17 +174,51 @@ namespace ModSync.UI
             var textColor = active ? Colors.Dark : Colors.White;
 
             DrawBorder(borderRect, borderThickness, borderColor);
-            GUI.DrawTexture(buttonRect, Utility.GetTexture(buttonColor), ScaleMode.StretchToFill);
+            GUI.DrawTexture(buttonRect, Utility.GetTexture(buttonColor), ScaleMode.StretchToFill, true, 0);
 
             return GUI.Button(
                 buttonRect,
-                new GUIContent(text),
+                new GUIContent(text, tooltip),
                 new GUIStyle()
                 {
                     fontSize = 20,
                     fontStyle = FontStyle.Bold,
                     alignment = TextAnchor.MiddleCenter,
                     normal = { textColor = textColor }
+                }
+            );
+        }
+    }
+
+    internal class UpdateButtonTooltip : Bordered
+    {
+        private const int borderThickness = 1;
+
+        public void Draw(Rect borderRect, string text)
+        {
+            if (text == string.Empty)
+                return;
+
+            DrawBorder(borderRect, borderThickness, Colors.Grey);
+
+            var tooltipRect = new Rect(
+                borderRect.x + borderThickness,
+                borderRect.y + borderThickness,
+                borderRect.width - 2 * borderThickness,
+                borderRect.height - 2 * borderThickness
+            );
+
+            var labelRect = new Rect(tooltipRect.x + 4f, tooltipRect.y, tooltipRect.width - 8f, tooltipRect.height);
+
+            GUI.DrawTexture(tooltipRect, Utility.GetTexture(Colors.Dark.SetAlpha(0.8f)), ScaleMode.StretchToFill, true, 0);
+            GUI.Label(
+                labelRect,
+                text,
+                new GUIStyle()
+                {
+                    fontSize = 14,
+                    alignment = TextAnchor.MiddleLeft,
+                    normal = { textColor = Colors.White }
                 }
             );
         }
