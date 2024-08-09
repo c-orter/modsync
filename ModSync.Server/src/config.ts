@@ -12,6 +12,7 @@ export type SyncPath = {
 	enabled?: boolean;
 	enforced?: boolean;
 	silent?: boolean;
+	restartRequired?: boolean;
 };
 
 type RawConfig = {
@@ -26,10 +27,14 @@ const DEFAULT_CONFIG = `{
 		"BepInEx/config",
 		{
 			"enabled": false,
-			"path": "user/mods"
+			"path": "user/mods",
+			"restartRequired": false
 		},
-		// ModSync Updater - is copied into position immediately upon update
-		"ModSync.Updater.exe"
+		{ 
+			"path": "ModSync.Updater.exe",
+			"enforced": true,
+			"restartRequired": false
+		}
 	],
 	"commonModExclusions": [
 		// SPT Installer

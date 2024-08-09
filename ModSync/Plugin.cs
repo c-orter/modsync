@@ -43,6 +43,14 @@ namespace ModSync
 
         private List<Task> downloadTasks = [];
 
+        private bool pluginFinished;
+        private int downloadCount;
+
+        private readonly Server server = new();
+        private CancellationTokenSource cts = new();
+
+        public static new readonly ManualLogSource Logger = BepInEx.Logging.Logger.CreateLogSource("ModSync");
+
         private int UpdateCount =>
             EnabledSyncPaths
                 .Select(
@@ -52,30 +60,37 @@ namespace ModSync
                         + (configDeleteRemovedFiles.Value ? removedFiles[syncPath.path].Count : 0)
                 )
                 .Sum();
-        private bool pluginFinished;
-        private int downloadCount;
-
-        private readonly Server server = new();
-        private CancellationTokenSource cts = new();
-
-        public static new readonly ManualLogSource Logger = BepInEx.Logging.Logger.CreateLogSource("ModSync");
-
         private bool IsDedicated => Chainloader.PluginInfos.ContainsKey("com.fika.dedicated");
         private List<SyncPath> EnabledSyncPaths => syncPaths.Where((syncPath) => configSyncPathToggles[syncPath.path].Value).ToList();
-        private List<string> downloadFiles => EnabledSyncPaths.SelectMany((syncPath) => addedFiles[syncPath.path].Union(updatedFiles[syncPath.path])).ToList();
 
-        private bool EnforcedMode =>
-            EnabledSyncPaths.All(
-                (syncPath) =>
-                    syncPath.enforced
-                    || (addedFiles[syncPath.path].Count == 0 && updatedFiles[syncPath.path].Count == 0 && removedFiles[syncPath.path].Count == 0)
-            );
+        private SyncPathFileList DownloadFiles =>
+            EnabledSyncPaths
+                .Select(
+                    (syncPath) => new KeyValuePair<string, List<string>>(syncPath.path, addedFiles[syncPath.path].Union(updatedFiles[syncPath.path]).ToList())
+                )
+                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.OrdinalIgnoreCase);
+
         private bool SilentMode =>
             IsDedicated
             || EnabledSyncPaths.All(
                 (syncPath) =>
                     syncPath.silent
-                    || (addedFiles[syncPath.path].Count == 0 && updatedFiles[syncPath.path].Count == 0 && removedFiles[syncPath.path].Count == 0)
+                    || (
+                        addedFiles[syncPath.path].Count == 0
+                        && updatedFiles[syncPath.path].Count == 0
+                        && (!configDeleteRemovedFiles.Value || removedFiles[syncPath.path].Count == 0)
+                    )
+            );
+
+        private bool NoRestartMode =>
+            EnabledSyncPaths.All(
+                (syncPath) =>
+                    !syncPath.restartRequired
+                    || (
+                        addedFiles[syncPath.path].Count == 0
+                        && updatedFiles[syncPath.path].Count == 0
+                        && (!configDeleteRemovedFiles.Value || removedFiles[syncPath.path].Count == 0)
+                    )
             );
 
         private void AnalyzeModFiles(SyncPathModFiles localModFiles)
@@ -95,7 +110,7 @@ namespace ModSync
             if (UpdateCount > 0)
             {
                 if (SilentMode)
-                    Task.Run(() => SyncMods(downloadFiles));
+                    Task.Run(() => SyncMods(DownloadFiles));
                 else
                     updateWindow.Show();
             }
@@ -107,14 +122,13 @@ namespace ModSync
         {
             var enforcedDownloads = EnabledSyncPaths
                 .Where(syncPath => syncPath.enforced)
-                .SelectMany(syncPath => addedFiles[syncPath.path].Union(updatedFiles[syncPath.path]))
-                .ToList();
-            if (
-                EnabledSyncPaths.Any(
-                    (syncPath) =>
-                        syncPath.enforced && (addedFiles[syncPath.path].Any() || updatedFiles[syncPath.path].Any() || removedFiles[syncPath.path].Any())
-                )
-            )
+                .Select(syncPath => new KeyValuePair<string, List<string>>(
+                    syncPath.path,
+                    addedFiles[syncPath.path].Union(updatedFiles[syncPath.path]).ToList()
+                ))
+                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.OrdinalIgnoreCase);
+
+            if (enforcedDownloads.Any())
             {
                 Task.Run(() => SyncMods(enforcedDownloads));
             }
@@ -125,7 +139,7 @@ namespace ModSync
             }
         }
 
-        private async Task SyncMods(List<string> filesToDownload)
+        private async Task SyncMods(SyncPathFileList filesToDownload)
         {
             updateWindow.Hide();
 
@@ -139,7 +153,21 @@ namespace ModSync
             var limiter = new SemaphoreSlim(8, maxCount: 8);
 
             Logger.LogInfo($"Starting download of {filesToDownload.Count} files.");
-            downloadTasks = filesToDownload.Select((file) => server.DownloadFile(file, PENDING_UPDATES_DIR, limiter, cts.Token)).ToList();
+            downloadTasks = EnabledSyncPaths
+                .SelectMany(
+                    (syncPath) =>
+                        filesToDownload[syncPath.path]
+                            .Select(
+                                (file) =>
+                                    server.DownloadFile(
+                                        file,
+                                        syncPath.restartRequired ? PENDING_UPDATES_DIR : Directory.GetCurrentDirectory(),
+                                        limiter,
+                                        cts.Token
+                                    )
+                            )
+                )
+                .ToList();
 
             while (downloadTasks.Count > 0 && !cts.IsCancellationRequested)
             {
@@ -173,7 +201,13 @@ namespace ModSync
             if (!cts.IsCancellationRequested)
             {
                 WriteModSyncData();
-                if (!IsDedicated)
+
+                if (NoRestartMode)
+                {
+                    Directory.Delete(PENDING_UPDATES_DIR, true);
+                    pluginFinished = true;
+                }
+                else if (!IsDedicated)
                     restartWindow.Show();
                 else
                     StartUpdaterProcess();
@@ -350,7 +384,7 @@ namespace ModSync
                         addedFiles[syncPath.path]
                             .Select((file) => $"ADDED {file}")
                             .Union(updatedFiles[syncPath.path].Select((file) => $"UPDATED {file}"))
-                            .Union(removedFiles[syncPath.path].Select((file) => $"REMOVED {file}"))
+                            .Union(configDeleteRemovedFiles.Value ? removedFiles[syncPath.path].Select((file) => $"REMOVED {file}") : [])
                 )
                 .ToList();
 
@@ -363,7 +397,7 @@ namespace ModSync
                         addedFiles[syncPath.path]
                             .Select((file) => $"ADDED {file}")
                             .Union(updatedFiles[syncPath.path].Select((file) => $"UPDATED {file}"))
-                            .Union(removedFiles[syncPath.path].Select((file) => $"REMOVED {file}"))
+                            .Union(configDeleteRemovedFiles.Value ? removedFiles[syncPath.path].Select((file) => $"REMOVED {file}") : [])
                 )
                 .ToList();
 
@@ -388,7 +422,7 @@ namespace ModSync
                     (optional.Any() ? string.Join("\n", optional) : "")
                         + (optional.Any() && required.Any() ? "\n\n" : "")
                         + (required.Any() ? "[Enforced]\n" + string.Join("\n", required) : ""),
-                    () => Task.Run(() => SyncMods(downloadFiles)),
+                    () => Task.Run(() => SyncMods(DownloadFiles)),
                     required.Any() && !optional.Any() ? null : SkipUpdatingMods
                 );
             }
