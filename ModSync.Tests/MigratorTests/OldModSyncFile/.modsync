@@ -1,0 +1,8 @@
+﻿{
+  "previousSync": {
+    "BepInEx\\plugins\\SAIN.dll": { "crc": 1234567 },
+    "BepInEx\\plugins\\Corter-ModSync.dll": { "crc": 1234567 }
+  },
+  "downloadDir": "",
+  "filesToDelete":  []
+}

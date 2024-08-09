@@ -33,7 +33,7 @@ namespace ModSync
         private Dictionary<string, ConfigEntry<bool>> configSyncPathToggles;
         private ConfigEntry<bool> configDeleteRemovedFiles;
 
-        private SyncPath[] syncPaths = [];
+        private List<SyncPath> syncPaths = [];
         private SyncPathModFiles remoteModFiles = [];
         private SyncPathModFiles previousSync = [];
 
@@ -306,6 +306,8 @@ namespace ModSync
                 }
             }
 
+            new Migrator(Directory.GetCurrentDirectory()).TryMigrate(Info.Metadata.Version, syncPaths);
+
             configSyncPathToggles = syncPaths
                 .Select(
                     (syncPath) =>
@@ -321,7 +323,7 @@ namespace ModSync
                 )
                 .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 
-            var localModFiles = Sync.HashLocalFiles(Directory.GetCurrentDirectory(), [.. syncPaths], EnabledSyncPaths);
+            var localModFiles = Sync.HashLocalFiles(Directory.GetCurrentDirectory(), syncPaths, EnabledSyncPaths);
 
             try
             {

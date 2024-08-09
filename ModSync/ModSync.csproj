@@ -114,6 +114,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Migrator.cs" />
     <Compile Include="Plugin.cs" />
     <Compile Include="ModSync.GUI\*.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
