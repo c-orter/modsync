@@ -27,6 +27,7 @@ namespace ModSync
         private static readonly string PENDING_UPDATES_DIR = Path.Combine(MODSYNC_DIR, "PendingUpdates");
         private static readonly string PREVIOUS_SYNC_PATH = Path.Combine(MODSYNC_DIR, "PreviousSync.json");
         private static readonly string REMOVED_FILES_PATH = Path.Combine(MODSYNC_DIR, "RemovedFiles.json");
+        private static readonly string UPDATER_PATH = Path.Combine(Directory.GetCurrentDirectory(), "ModSync.Updater.exe");
 
         // Configuration
         private Dictionary<string, ConfigEntry<bool>> configSyncPathToggles;
@@ -188,7 +189,9 @@ namespace ModSync
 
         private void StartUpdaterProcess()
         {
-            Process.Start(Path.Combine(Directory.GetCurrentDirectory(), "ModSync.Updater.exe"), Process.GetCurrentProcess().Id.ToString());
+            List<string> options = [];
+
+            Process.Start(UPDATER_PATH, $"{string.Join(" ", options)} {Process.GetCurrentProcess().Id}");
             Application.Quit();
         }
 
@@ -357,7 +360,7 @@ namespace ModSync
                     SkipUpdatingMods
                 );
             }
-            
+
             if (downloadErrorWindow.Active)
                 downloadErrorWindow.Draw(Application.Quit);
         }
