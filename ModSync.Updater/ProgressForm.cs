@@ -18,6 +18,7 @@ namespace ModSync.Updater
 
         private async void ProgressForm_Load(object sender, EventArgs _)
         {
+            VersionLabel.Text = $"v{Application.ProductVersion}";
             StatusText.Text = @"Waiting while Tarkov closes...";
             while (true)
             {
