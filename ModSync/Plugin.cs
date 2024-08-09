@@ -287,10 +287,12 @@ namespace ModSync
         {
             ConsoleScreen.Processor.RegisterCommand(
                 "modsync",
-                () =>
+                // ReSharper disable once AsyncVoidLambda
+                async () =>
                 {
-                    StartPlugin();
-                    ConsoleScreen.Log($"Found {UpdateCount} updates available.");
+                    ConsoleScreen.Log($"Checking for updates.");
+                    await Task.Run(StartPlugin);
+                    ConsoleScreen.Log($"Found {UpdateCount} available updates.");
                 }
             );
 
