@@ -36,7 +36,7 @@ sed(
 sed("-i", `"${currentVersion}"`, `"${newVersion}"`, "Plugin.cs");
 popd("-q");
 
-pushd("-q", "../ModSync.PrePatcher");
+pushd("-q", "../ModSync.Updater");
 sed(
 	"-i",
 	`"${currentVersion}"`,
