@@ -16,9 +16,9 @@ namespace ModSync.Tests
             string testPath,
             List<SyncPath> syncPaths,
             bool configDeleteRemovedFiles,
-            out Dictionary<string, List<string>> addedFiles,
-            out Dictionary<string, List<string>> updatedFiles,
-            out Dictionary<string, List<string>> removedFiles,
+            out SyncPathFileList addedFiles,
+            out SyncPathFileList updatedFiles,
+            out SyncPathFileList removedFiles,
             ref List<string> downloadedFiles
         )
         {
@@ -31,9 +31,7 @@ namespace ModSync.Tests
                 Directory.CreateDirectory(localPath);
 
             var previousSyncPath = Path.Combine(localPath, "ModSync_Data", "PreviousSync.json");
-            var previousSync = VFS.Exists(previousSyncPath)
-                ? Json.Deserialize<SyncPathModFiles>(File.ReadAllText(previousSyncPath))
-                : [];
+            var previousSync = VFS.Exists(previousSyncPath) ? Json.Deserialize<SyncPathModFiles>(File.ReadAllText(previousSyncPath)) : [];
 
             var remoteModFiles = Sync.HashLocalFiles(remotePath, syncPaths, syncPaths);
             var localModFiles = Sync.HashLocalFiles(localPath, syncPaths, syncPaths);
@@ -142,7 +140,7 @@ namespace ModSync.Tests
 
             List<string> downloadedFiles = [];
 
-            var (previousSync, filesToDelete) = RunPlugin(
+            var (previousSync, _) = RunPlugin(
                 testPath,
                 syncPaths: [new SyncPath("SAIN.dll")],
                 configDeleteRemovedFiles: true,
@@ -167,7 +165,7 @@ namespace ModSync.Tests
 
             List<string> downloadedFiles = [];
 
-            var (previousSync, filesToDelete) = RunPlugin(
+            var (_, filesToDelete) = RunPlugin(
                 testPath,
                 syncPaths: [new SyncPath("SAIN.dll")],
                 configDeleteRemovedFiles: true,
@@ -192,7 +190,7 @@ namespace ModSync.Tests
 
             List<string> downloadedFiles = [];
 
-            var (previousSync, filesToDelete) = RunPlugin(
+            RunPlugin(
                 testPath,
                 syncPaths: [new SyncPath("plugins")],
                 configDeleteRemovedFiles: true,
@@ -217,7 +215,7 @@ namespace ModSync.Tests
 
             List<string> downloadedFiles = [];
 
-            var persist = RunPlugin(
+            var (_, filesToDelete) = RunPlugin(
                 testPath,
                 syncPaths: [new SyncPath("plugins")],
                 configDeleteRemovedFiles: true,
@@ -226,11 +224,11 @@ namespace ModSync.Tests
                 out var removedFiles,
                 ref downloadedFiles
             );
-            
+
             Assert.AreEqual(0, addedFiles["plugins"].Count);
             Assert.AreEqual(0, updatedFiles["plugins"].Count);
             Assert.AreEqual(0, removedFiles["plugins"].Count);
-            Assert.AreEqual(0, persist.filesToDelete.Count);
+            Assert.AreEqual(0, filesToDelete.Count);
         }
     }
 }
