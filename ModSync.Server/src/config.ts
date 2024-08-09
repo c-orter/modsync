@@ -27,14 +27,14 @@ const DEFAULT_CONFIG = `{
 		{
 			"enabled": false,
 			"path": "user/mods"
-		}
+		},
+		// ModSync Updater - is copied into position immediately upon update
+		"ModSync.Updater.exe"
 	],
 	"commonModExclusions": [
 		// SPT Installer
 		"BepInEx/plugins/spt",
 		"BepInEx/patchers/spt-prepatch.dll",
-		// Corter-ModSync
-		"BepInEx/patchers/Corter-ModSync-Patcher.dll",
 		// Questing Bots
 		"BepInEx/plugins/DanW-SPTQuestingBots/log",
 		// Realism
