@@ -113,7 +113,7 @@ namespace ModSync.UI
             scrollPosition = GUI.BeginScrollView(
                 scrollRect,
                 scrollPosition,
-                new(0f, 0f, alertRect.width, scrollHeight + 12f),
+                new(0f, 0f, alertRect.width, scrollHeight + 32f),
                 false,
                 true,
                 GUIStyle.none,
