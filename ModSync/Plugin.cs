@@ -45,6 +45,7 @@ namespace ModSync
 
         private bool pluginFinished;
         private int downloadCount;
+        private int totalDownloadCount;
 
         private readonly Server server = new();
         private CancellationTokenSource cts = new();
@@ -128,7 +129,7 @@ namespace ModSync
                 ))
                 .ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.OrdinalIgnoreCase);
 
-            if (enforcedDownloads.Any())
+            if (enforcedDownloads.Values.Any(files => files.Any()))
             {
                 Task.Run(() => SyncMods(enforcedDownloads));
             }
@@ -147,8 +148,7 @@ namespace ModSync
                 Directory.CreateDirectory(PENDING_UPDATES_DIR);
 
             downloadCount = 0;
-            if (!IsDedicated)
-                progressWindow.Show();
+            totalDownloadCount = 0;
 
             var limiter = new SemaphoreSlim(8, maxCount: 8);
 
@@ -156,8 +156,8 @@ namespace ModSync
             downloadTasks = EnabledSyncPaths
                 .SelectMany(
                     (syncPath) =>
-                        filesToDownload[syncPath.path]
-                            .Select(
+                        filesToDownload.TryGetValue(syncPath.path, out var pathFilesToDownload)
+                            ? pathFilesToDownload.Select(
                                 (file) =>
                                     server.DownloadFile(
                                         file,
@@ -166,8 +166,14 @@ namespace ModSync
                                         cts.Token
                                     )
                             )
+                            : []
                 )
                 .ToList();
+
+            totalDownloadCount = downloadTasks.Count;
+
+            if (!IsDedicated)
+                progressWindow.Show();
 
             while (downloadTasks.Count > 0 && !cts.IsCancellationRequested)
             {
@@ -176,7 +182,6 @@ namespace ModSync
                 try
                 {
                     await task;
-                    Logger.LogInfo($"Finished downloading file ({downloadCount}/{filesToDownload.Count}).");
                 }
                 catch (Exception e)
                 {
@@ -410,11 +415,7 @@ namespace ModSync
                 restartWindow.Draw(StartUpdaterProcess);
 
             if (progressWindow.Active)
-                progressWindow.Draw(
-                    downloadCount,
-                    addedFiles.Values.Select((files) => files.Count).Sum() + updatedFiles.Values.Select((files) => files.Count).Sum(),
-                    required.Any() ? null : () => Task.Run(CancelUpdatingMods)
-                );
+                progressWindow.Draw(downloadCount, totalDownloadCount, required.Any() ? null : () => Task.Run(CancelUpdatingMods));
 
             if (updateWindow.Active)
             {
