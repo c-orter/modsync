@@ -2,15 +2,30 @@
 
 ## About The Project
 
+This project allows clients to easily add/update/remove mods, keeping them in sync with the host when playing on a remote SPT/Fika server.
+
 <table>
 <tbody>
 <tr>
 <td>
 
-![Screenshot Confirmation](https://github.com/c-orter/modsync/assets/5890013/931c9187-2a26-4fd5-8fe7-5f98383b1c10)</td>
+![Updater Complete](https://github.com/user-attachments/assets/f66a09b5-e133-418f-abf9-466b619cd2c9)</td>
+</tr>
+<tr>
+<td>Updater completed</td>
+</tr>
+</tbody>
+</table>
+
+<table>
+<tbody>
+<tr>
 <td>
 
-![Screenshot Progress](https://github.com/c-orter/modsync/assets/5890013/61954bdc-a7c6-4713-b106-00577076edd5)</td>
+![Update Required](https://github.com/user-attachments/assets/03c3ed36-f6d3-4067-b1dc-48fe726ed489)</td>
+<td>
+
+![Update Progress](https://github.com/user-attachments/assets/c4ca8953-03be-4d3b-af96-6ee7f1ee3ce2)</td>
 </tr>
 <tr>
 <td>Prompt to update</td>
@@ -18,8 +33,6 @@
 </tr>
 </tbody>
 </table>
-
-This project allows clients to easily synchronize mods between server and client when using a remote SPT/Fika server.
 
 ## Getting Started
 
