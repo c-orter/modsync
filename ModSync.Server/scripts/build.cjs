@@ -21,7 +21,7 @@ cp(`../ModSync.Updater/bin/${configuration}/ModSync.Updater.exe`, "../dist/")
 
 pushd("-q", "../dist");
 config.silent = true;
-exec(`7z a -tzip Corter-ModSync-Server-v${packageJson.version}.zip user/`);
 exec(`7z a -tzip Corter-ModSync-Client-v${packageJson.version}.zip BepInEx/ ModSync.Updater.exe`);
+exec(`7z a -tzip Corter-ModSync-Server-v${packageJson.version}.zip BepInEx/ ModSync.Updater.exe user/`);
 config.silent = false;
 popd("-q");
