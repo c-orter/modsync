@@ -410,6 +410,15 @@ namespace ModSync
                 )
                 .ToList();
 
+        private List<string> _noRestart;
+        private List<string> noRestart =>
+            _noRestart ??= EnabledSyncPaths
+                .Where((syncPath) => !syncPath.restartRequired)
+                .SelectMany(syncPath =>
+                    addedFiles[syncPath.path].Union(updatedFiles[syncPath.path]).Union(configDeleteRemovedFiles.Value ? removedFiles[syncPath.path] : [])
+                )
+                .ToList();
+
         private void OnGUI()
         {
             if (!Singleton<CommonUI>.Instantiated)
@@ -419,7 +428,7 @@ namespace ModSync
                 restartWindow.Draw(StartUpdaterProcess);
 
             if (progressWindow.Active)
-                progressWindow.Draw(downloadCount, totalDownloadCount, required.Any() ? null : () => Task.Run(CancelUpdatingMods));
+                progressWindow.Draw(downloadCount, totalDownloadCount, required.Any() || noRestart.Any() ? null : () => Task.Run(CancelUpdatingMods));
 
             if (updateWindow.Active)
             {
