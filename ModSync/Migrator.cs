@@ -14,17 +14,14 @@ public class Migrator(string baseDir)
     private string PREVIOUS_SYNC_PATH => Path.Combine(MODSYNC_DIR, "PreviousSync.json");
     private string MODSYNC_PATH => Path.Combine(baseDir, ".modsync");
 
+    private List<string> CLEANUP_FILES => [MODSYNC_PATH, Path.Combine(baseDir, @"BepInEx\patchers\Corter-ModSync-Patcher.dll")];
+
     private Version DetectPreviousVersion()
     {
         try
         {
-            if (Directory.Exists(MODSYNC_DIR))
-            {
-                if (File.Exists(VERSION_PATH))
-                {
-                    return Version.Parse(File.ReadAllText(VERSION_PATH));
-                }
-            }
+            if (Directory.Exists(MODSYNC_DIR) && File.Exists(VERSION_PATH))
+                return Version.Parse(File.ReadAllText(VERSION_PATH));
 
             if (File.Exists(MODSYNC_PATH))
             {
@@ -44,11 +41,11 @@ public class Migrator(string baseDir)
 
     private void Cleanup()
     {
-        if (File.Exists(MODSYNC_PATH))
-            File.Delete(MODSYNC_PATH);
-
         if (Directory.Exists(MODSYNC_DIR))
             Directory.Delete(MODSYNC_DIR, true);
+
+        foreach (var file in CLEANUP_FILES.Where(File.Exists))
+            File.Delete(file);
     }
 
     public void TryMigrate(Version pluginVersion, List<SyncPath> syncPaths)
@@ -99,7 +96,8 @@ public class Migrator(string baseDir)
             File.WriteAllText(PREVIOUS_SYNC_PATH, Json.Serialize(newPreviousSync));
             File.WriteAllText(VERSION_PATH, pluginVersion.ToString());
 
-            File.Delete(MODSYNC_PATH);
+            foreach (var file in CLEANUP_FILES.Where(File.Exists))
+                File.Delete(file);
         }
         else if (oldVersion.Minor == pluginVersion.Minor && oldVersion != pluginVersion)
         {
