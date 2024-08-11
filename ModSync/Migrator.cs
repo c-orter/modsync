@@ -101,7 +101,7 @@ public class Migrator(string baseDir)
 
             File.Delete(MODSYNC_PATH);
         }
-        else if (oldVersion < Version.Parse("0.9.0") && oldVersion != pluginVersion)
+        else if (oldVersion.Minor == pluginVersion.Minor && oldVersion != pluginVersion)
         {
             Plugin.Logger.LogWarning("Previous sync was made with a different version of the plugin. This may cause issues. Continuing...");
         }

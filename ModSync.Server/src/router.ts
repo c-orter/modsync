@@ -44,7 +44,7 @@ export class Router {
 	/**
 	 * @internal
 	 */
-	public getServerVersion(res: ServerResponse, _: RegExpMatchArray) {
+	public getServerVersion(req: IncomingMessage, res: ServerResponse, _: RegExpMatchArray) {
 		res.setHeader("Content-Type", "application/json");
 		res.writeHead(200, "OK");
 		res.end(JSON.stringify(this.packageJson.version));
@@ -53,11 +53,12 @@ export class Router {
 	/**
 	 * @internal
 	 */
-	public getSyncPaths(res: ServerResponse, matches: RegExpMatchArray) {
-		if (matches[1] in FALLBACK_SYNCPATHS) {
+	public getSyncPaths(req: IncomingMessage, res: ServerResponse, _: RegExpMatchArray) {
+		const version = req.headers["ModSync-Version"] as string;
+		if (version in FALLBACK_SYNCPATHS) {
 			res.setHeader("Content-Type", "application/json");
 			res.writeHead(200, "OK");
-			res.end(JSON.stringify(FALLBACK_SYNCPATHS[matches[1]]));
+			res.end(JSON.stringify(FALLBACK_SYNCPATHS[version]));
 			return;
 		}
 		
@@ -76,11 +77,12 @@ export class Router {
 	/**
 	 * @internal
 	 */
-	public getHashes(res: ServerResponse, matches: RegExpMatchArray) {
-		if (matches[1] in FALLBACK_HASHES) {
+	public getHashes(req: IncomingMessage, res: ServerResponse, _: RegExpMatchArray) {
+		const version = req.headers["ModSync-Version"] as string;
+		if (version in FALLBACK_HASHES) {
 			res.setHeader("Content-Type", "application/json");
 			res.writeHead(200, "OK");
-			res.end(JSON.stringify(FALLBACK_HASHES[matches[1]]));
+			res.end(JSON.stringify(FALLBACK_HASHES[version]));
 			return;
 		}
 		
@@ -93,7 +95,7 @@ export class Router {
 	/**
 	 * @internal
 	 */
-	public fetchModFile(res: ServerResponse, matches: RegExpMatchArray) {
+	public fetchModFile(_: IncomingMessage, res: ServerResponse, matches: RegExpMatchArray) {
 		const filePath = decodeURIComponent(matches[1]);
 
 		const sanitizedPath = this.syncUtil.sanitizeDownloadPath(
@@ -126,11 +128,11 @@ export class Router {
 				handler: this.getServerVersion.bind(this)
 			},
 			{
-				route: glob("/modsync(/v*)?/paths"),
+				route: glob("/modsync/paths"),
 				handler: this.getSyncPaths.bind(this),
 			},
 			{
-				route: glob("/modsync(/v*)?/hashes"),
+				route: glob("/modsync/hashes"),
 				handler: this.getHashes.bind(this),
 			},
 			{
@@ -142,7 +144,7 @@ export class Router {
 		try {
 			for (const { route, handler } of routeTable) {
 				const matches = route.exec(req.url || "");
-				if (matches) return handler(res, matches);
+				if (matches) return handler(req, res, matches);
 			}
 
 			throw new HttpError(404, "Corter-ModSync: Unknown route");
