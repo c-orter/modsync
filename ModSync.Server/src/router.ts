@@ -9,6 +9,7 @@ import { HttpError, winPath } from "./utility";
 import type { ILogger } from "@spt/models/spt/utils/ILogger";
 import type { PreSptModLoader } from "@spt/loaders/PreSptModLoader";
 import { statSync } from "node:fs";
+import {HttpServerHelper} from "@spt/helpers/HttpServerHelper";
 
 const FALLBACK_SYNCPATHS: Record<string, any> = {
 	undefined: [
@@ -23,13 +24,14 @@ const FALLBACK_HASHES: Record<string, any> = {
 		"ModSync.Updater.exe": { crc: 999999999 }
 	}
 }
-	
+
 export class Router {
 	constructor(
 		private config: Config,
 		private syncUtil: SyncUtil,
 		private vfs: VFS,
 		private httpFileUtil: HttpFileUtil,
+		private httpServerHelper: HttpServerHelper,
 		private modImporter: PreSptModLoader,
 		private logger: ILogger,
 	) {}
@@ -111,6 +113,7 @@ export class Router {
 
 		try {
 			const fileStats = statSync(sanitizedPath);
+			res.setHeader("Content-Type", this.httpServerHelper.getMimeText(path.extname(filePath)) || "text/plain");
 			res.setHeader("Content-Length", fileStats.size);
 			this.httpFileUtil.sendFile(res, sanitizedPath);
 		} catch (e) {

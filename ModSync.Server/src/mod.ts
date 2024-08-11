@@ -11,6 +11,7 @@ import { ConfigUtil, type Config } from "./config";
 import { SyncUtil } from "./sync";
 import { Router } from "./router";
 import type { PreSptModLoader } from "@spt/loaders/PreSptModLoader";
+import {HttpServerHelper} from "@spt/helpers/HttpServerHelper";
 
 class Mod implements IPreSptLoadMod {
 	private static container: DependencyContainer;
@@ -56,6 +57,7 @@ class Mod implements IPreSptLoadMod {
 		const logger = Mod.container.resolve<ILogger>("WinstonLogger");
 		const vfs = Mod.container.resolve<VFS>("VFS");
 		const httpFileUtil = Mod.container.resolve<HttpFileUtil>("HttpFileUtil");
+		const httpServerHelper = Mod.container.resolve<HttpServerHelper>("HttpServerHelper");
 		const modImporter =
 			Mod.container.resolve<PreSptModLoader>("PreSptModLoader");
 		const syncUtil = new SyncUtil(vfs, Mod.config, logger);
@@ -64,6 +66,7 @@ class Mod implements IPreSptLoadMod {
 			syncUtil,
 			vfs,
 			httpFileUtil,
+			httpServerHelper,
 			modImporter,
 			logger,
 		);
