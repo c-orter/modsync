@@ -97,6 +97,14 @@ describe("router", () => {
 
 			expect(res.end.mock.calls).toMatchSnapshot();
 		});
+		
+		it("should serve 'rescue' mode paths when no version specified", async () => {
+			req.headers["modsync-version"] = undefined;
+			
+			await router.getSyncPaths(req, res, mock<RegExpMatchArray>());
+			
+			expect(res.end.mock.calls).toMatchSnapshot();
+		})
 	});
 
 	describe("getHashes", () => {
@@ -141,6 +149,14 @@ describe("router", () => {
 
 			expect(res.end.mock.calls).toMatchSnapshot();
 		});
+		
+		it("should serve 'rescue' mode hashes when no version specified", async () => {
+			req.headers["modsync-version"] = undefined;
+			
+			await router.getHashes(req, res, mock<RegExpMatchArray>());
+			
+			expect(res.end.mock.calls).toMatchSnapshot();
+		})
 	});
 
 	describe("fetchModFile", () => {

@@ -8,10 +8,26 @@ exports[`router > getHashes > should return hashes 1`] = `
 ]
 `;
 
+exports[`router > getHashes > should serve 'rescue' mode hashes when no version specified 1`] = `
+[
+  [
+    "{"BepInEx\\\\plugins\\\\Corter-ModSync.dll":{"crc":999999999},"ModSync.Updater.exe":{"crc":999999999}}",
+  ],
+]
+`;
+
 exports[`router > getSyncPaths > should return sync paths 1`] = `
 [
   [
     "[{"path":"plugins","enabled":true,"enforced":false,"silent":false,"restartRequired":true},{"path":"user\\\\mods","enabled":true,"enforced":false,"silent":false,"restartRequired":false},{"path":"user\\\\cache","enabled":false,"enforced":false,"silent":false,"restartRequired":true}]",
+  ],
+]
+`;
+
+exports[`router > getSyncPaths > should serve 'rescue' mode paths when no version specified 1`] = `
+[
+  [
+    "["BepInEx\\\\plugins\\\\Corter-ModSync.dll","ModSync.Updater.exe"]",
   ],
 ]
 `;
