@@ -42,13 +42,13 @@ This project allows clients to easily add/update/remove mods, keeping them in sy
 2. Extract into your SPT folder like any other server mod
 3. Start the server
 
-> Look for the message `Mod: corter-modsync version: 0.0.0 by: Corter loaded` to ensure installation was successful
+> Look for the message `Mod: Corter-ModSync version: 0.0.0 by: Corter loaded` to ensure installation was successful
 
 ### Client Setup
 
 1. Download the latest version of the client mod from the [GitHub Releases](https://github.com/c-orter/modsync/releases) page
 2. Extract into your SPT/Fika folder like any other client mod
-   > Ensure you have both `BepInEx/plugins/Corter-ModSync.dll` **AND** `BepInEx/patchers/Corter-ModSync-PrePatcher.dll`.
+   > Ensure you have both `BepInEx/plugins/Corter-ModSync.dll` **AND** `ModSync.Updater.exe`.
 3. Start the client and enjoy!
 
 
@@ -58,10 +58,71 @@ This project allows clients to easily add/update/remove mods, keeping them in sy
 
 > Modify `config.jsonc` in user/mods/corter-modsync
 
-| Configuration | Description | Default |
-| --- | --- | --- |
-| `syncPath` | List of paths to sync (can be folders or files) | `["BepInEx/plugins", "BepInEx/config", "BepInEx/patchers", "user/mods"]` |
-| `commonModExclusions` | List of files from common mods that should be excluded from syncing | See [config.json](src/config.jsonc) |
+| Configuration           | Description                                                         | Default                             |
+|-------------------------|---------------------------------------------------------------------|-------------------------------------|
+| `syncPaths`             | List of paths to sync (can be folders or files)                     | See [below](#Sync-Paths)            |
+| `commonModExclusions`   | List of files from common mods that should be excluded from syncing | See [config.json](src/config.jsonc) |
+
+#### Sync Paths
+
+```json
+[
+   "BepInEx/plugins",
+   "BepInEx/patchers",
+   "BepInEx/config",
+   {
+      "enabled": false,
+      "path": "user/mods",
+      "restartRequired": false
+   },
+   { 
+      "path": "ModSync.Updater.exe",
+      "enforced": true,
+      "restartRequired": false
+   }
+]
+```
+
+<table>
+<tbody>
+<tr>
+<td>
+
+**path - the actual path to be synced**<br>
+Path must be relative to the SPT server installation and must be within the SPT server installation.
+</td>
+</tr>
+<tr>
+<td>
+
+**enabled (default: `true`) - whether or not the client will sync this path by default**<br>
+Users can opt in to these directories through the BepInEx configuration manager (F12). (user/mods for instance)</td>
+</tr>
+<tr>
+<td>
+
+**enforced (default: `false`) - server authoritative syncing**<br>
+This mode enables server admins to (more or less) guarantee what files their clients will have. On sync paths with this option enabled any files added by the client will be removed, files modified by the client will be updated, and files removed will be re-downloaded.
+These updates cannot be skipped or cancelled.
+
+> **Note:** For enforced paths, any excluded files will have to be present on the server in order to not be deleted by the client. For example BepInEx/plugins/spt will have to be copied onto the server if you want to enforce BepInEx/plugins. These nosync files could be empty text files, as their hash isn't actually checked.
+
+> **Note:** Users could just uninstall the plugin and change files at will. ¯\_(ツ)_/¯</td>
+</tr>
+<tr>
+<td>
+
+**silent (default: `false`) - whether user will be prompted to apply these updates**<br>
+When some silent and some non-silent updates are available to download, these updates will still be shown in the changelog. However, if applied on their own, these updates will be downloaded and the first prompt the user sees will be the restart required screen.</td>
+</tr>
+<tr>
+<td>
+
+**restartRequired (default: `true`) - controls if updates are applied immediately or using the updater outside of game.**<br>
+This can be particularly useful for user/mods or if admins wanted to sync profiles so users could continue playing offline (though nothing would be synced back to the server). Paired with silent, this leads to updates where users only see the main menu when relevant updates occur.</td>
+</tr>
+</tbody>
+</table>
 
 ### Client
 
@@ -120,6 +181,7 @@ served from `user/mods`.
 - [x] Ability to exclude files/folders from syncing from both client and server
 - [x] Custom folder sync support (May be useful for cached bundles? or mods that add files places that aren't BepInEx/plugins, BepInEx/config, or user/mods)
 - [x] Maybe cooler progress bar/custom UI (low priority)
+- [x] External updater to prevent file-in-use issues
 - [ ] Allow user to upload their local mods folders to host. (Needs some form of authorization, could be cool though)
 - [ ] Buttons to sync from the BepInEx config menu (F12)
 - [x] Real tests?!? (low priority)
