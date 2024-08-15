@@ -28,7 +28,7 @@ public class Migrator(string baseDir)
                 var persist = JObject.Parse(File.ReadAllText(MODSYNC_PATH));
                 if (persist.ContainsKey("version") && persist["version"] != null)
                 {
-                    return int.Parse(persist["version"].Value<string>()) switch
+                    return persist["version"].Value<int>() switch
                     {
                         7 => Version.Parse("0.7.0"),
                         _ => Version.Parse("0.0.0")
@@ -36,10 +36,10 @@ public class Migrator(string baseDir)
                 }
             }
         }
-        catch
+        catch (Exception e)
         {
             Plugin.Logger.LogWarning("Failed to identify previous version. Cleaning up and attempting to continue.");
-            throw;
+            Plugin.Logger.LogWarning(e);
         }
 
         return Version.Parse("0.0.0");
