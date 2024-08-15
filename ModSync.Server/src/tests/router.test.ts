@@ -13,7 +13,7 @@ import type { PreSptModLoader as IPreSptModLoader } from "@spt/loaders/PreSptMod
 import type { ILogger } from "@spt/models/spt/utils/ILogger";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { HttpError } from "../utility";
-import { HttpServerHelper } from "@spt/helpers/HttpServerHelper";
+import type { HttpServerHelper } from "@spt/helpers/HttpServerHelper";
 
 vi.mock("node:fs", async () => (await vi.importActual("memfs")).fs);
 

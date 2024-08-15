@@ -1,6 +1,6 @@
 ﻿import { fs } from "memfs";
 import type Dirent from "memfs/lib/Dirent";
-import { StatOptions, Stats } from "node:fs";
+import type { StatOptions, Stats } from "node:fs";
 export class VFS {
 	public exists(path: string) {
 		return fs.existsSync(path);
@@ -22,7 +22,11 @@ export class VFS {
 		return Promise.resolve(contents as Buffer);
 	}
 
-	public writeFilePromisify(path: string, contents: string, options?: any) {
+	public writeFilePromisify(
+		path: string,
+		contents: string,
+		options?: Record<string, string | number>,
+	) {
 		return fs.writeFileSync(path, contents);
 	}
 

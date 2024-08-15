@@ -8,13 +8,13 @@ import type { Config } from "./config";
 import { HttpError, winPath } from "./utility";
 import type { ILogger } from "@spt/models/spt/utils/ILogger";
 import type { PreSptModLoader } from "@spt/loaders/PreSptModLoader";
-import { HttpServerHelper } from "@spt/helpers/HttpServerHelper";
+import type { HttpServerHelper } from "@spt/helpers/HttpServerHelper";
 
-const FALLBACK_SYNCPATHS: Record<string, any> = {
+const FALLBACK_SYNCPATHS: Record<string, object> = {
 	undefined: ["BepInEx\\plugins\\Corter-ModSync.dll", "ModSync.Updater.exe"],
 };
 
-const FALLBACK_HASHES: Record<string, any> = {
+const FALLBACK_HASHES: Record<string, object> = {
 	undefined: {
 		"BepInEx\\plugins\\Corter-ModSync.dll": { crc: 999999999 },
 		"ModSync.Updater.exe": { crc: 999999999 },
@@ -32,19 +32,6 @@ export class Router {
 		private logger: ILogger,
 	) {}
 
-	get packageJson() {
-		const modPath = this.modImporter.getModPath("Corter-ModSync");
-		return (
-			this.vfs
-				// @ts-expect-error I am right, SPT is wrong
-				.readFilePromisify(path.join(modPath, "package.json"), {
-					encoding: "utf-8",
-				})
-				// @ts-expect-error I am right, SPT is wrong
-				.then(JSON.parse)
-		);
-	}
-
 	/**
 	 * @internal
 	 */
@@ -53,9 +40,19 @@ export class Router {
 		res: ServerResponse,
 		_: RegExpMatchArray,
 	) {
+		const modPath = this.modImporter.getModPath("Corter-ModSync");
+		const packageJson = JSON.parse(
+			// @ts-expect-error readFile returns a string when given a valid encoding
+			await this.vfs
+				// @ts-expect-error readFile takes in an options object, including an encoding option
+				.readFilePromisify(path.join(modPath, "package.json"), {
+					encoding: "utf-8",
+				}),
+		);
+
 		res.setHeader("Content-Type", "application/json");
 		res.writeHead(200, "OK");
-		res.end(JSON.stringify((await this.packageJson).version));
+		res.end(JSON.stringify(packageJson.version));
 	}
 
 	/**

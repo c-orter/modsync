@@ -38,9 +38,9 @@ public class IntegrationTests
 
         Sync.CompareModFiles(syncPaths, localModFiles, remoteModFiles, previousSync, out addedFiles, out updatedFiles, out removedFiles);
 
-        downloadedFiles.AddRange(addedFiles.SelectMany((kvp) => kvp.Value).Union(updatedFiles.SelectMany((kvp) => kvp.Value)));
+        downloadedFiles.AddRange(addedFiles.SelectMany(kvp => kvp.Value).Union(updatedFiles.SelectMany(kvp => kvp.Value)));
 
-        return (remoteModFiles, configDeleteRemovedFiles ? removedFiles.SelectMany((kvp) => kvp.Value).ToList() : []);
+        return (remoteModFiles, configDeleteRemovedFiles ? removedFiles.SelectMany(kvp => kvp.Value).ToList() : []);
     }
 
     [TestMethod]
@@ -95,12 +95,12 @@ public class IntegrationTests
         Assert.AreEqual(0, removedFiles["plugins"].Count);
 
         Assert.AreEqual(2, downloadedFiles.Count);
-        CollectionAssert.AreEquivalent(new List<string>() { @"plugins\SAIN.dll", @"plugins\Corter-ModSync.dll" }, downloadedFiles);
+        CollectionAssert.AreEquivalent(new List<string> { @"plugins\SAIN.dll", @"plugins\Corter-ModSync.dll" }, downloadedFiles);
 
         Assert.AreEqual(0, filesToDelete.Count);
 
         Assert.AreEqual(2, previousSync["plugins"].Count);
-        CollectionAssert.AreEquivalent(new List<string>() { @"plugins\SAIN.dll", @"plugins\Corter-ModSync.dll" }, previousSync["plugins"].Keys);
+        CollectionAssert.AreEquivalent(new List<string> { @"plugins\SAIN.dll", @"plugins\Corter-ModSync.dll" }, previousSync["plugins"].Keys);
     }
 
     [TestMethod]
@@ -180,7 +180,7 @@ public class IntegrationTests
         Assert.AreEqual(1, removedFiles["SAIN.dll"].Count);
 
         Assert.AreEqual(0, downloadedFiles.Count);
-        CollectionAssert.AreEquivalent(new List<string>() { "SAIN.dll" }, filesToDelete);
+        CollectionAssert.AreEquivalent(new List<string> { "SAIN.dll" }, filesToDelete);
     }
 
     [TestMethod]

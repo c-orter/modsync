@@ -2,6 +2,7 @@ using System;
 using UnityEngine;
 
 namespace ModSync.UI;
+
 public class ProgressWindow(string title, string message)
 {
     private readonly InfoBox infoBox = new(title, message);
@@ -119,7 +120,7 @@ internal class CancelButton : Bordered
         return GUI.Button(
             buttonRect,
             new GUIContent("CANCEL UPDATE"),
-            new GUIStyle()
+            new GUIStyle
             {
                 fontSize = 20,
                 fontStyle = FontStyle.Bold,

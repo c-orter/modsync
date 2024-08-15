@@ -2,6 +2,7 @@ using System;
 using UnityEngine;
 
 namespace ModSync.UI;
+
 public class AlertWindow(Vector2 size, string title, string message, string buttonText = "EXIT GAME")
 {
     private readonly InfoBox infoBox = new(title, message);
@@ -17,8 +18,8 @@ public class AlertWindow(Vector2 size, string title, string message, string butt
         float screenWidth = Screen.width;
         float screenHeight = Screen.height;
 
-        var windowWidth = 640f;
-        var windowHeight = 640f;
+        const float windowWidth = 640f;
+        const float windowHeight = 640f;
 
         GUILayout.BeginArea(new Rect((screenWidth - windowWidth) / 2f, (screenHeight - windowHeight) / 2f, windowWidth, windowHeight));
         GUILayout.BeginVertical();
@@ -34,7 +35,7 @@ public class AlertWindow(Vector2 size, string title, string message, string butt
 
         GUILayout.BeginHorizontal();
         GUILayout.FlexibleSpace();
-        if (alertButton.Draw(new(196f, 48f)))
+        if (alertButton.Draw(new Vector2(196f, 48f)))
             restartAction();
         GUILayout.FlexibleSpace();
         GUILayout.EndHorizontal();
@@ -82,7 +83,7 @@ internal class AlertButton(string text) : Bordered
         return GUI.Button(
             buttonRect,
             new GUIContent(text),
-            new GUIStyle()
+            new GUIStyle
             {
                 fontSize = 20,
                 fontStyle = FontStyle.Bold,

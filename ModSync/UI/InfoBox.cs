@@ -1,6 +1,7 @@
 using UnityEngine;
 
 namespace ModSync.UI;
+
 internal class InfoBox(string title, string message, int borderThickness = 2, bool transparent = false) : Bordered
 {
     public void Draw(Vector2 size)

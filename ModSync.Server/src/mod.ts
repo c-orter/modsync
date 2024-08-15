@@ -11,7 +11,7 @@ import { ConfigUtil, type Config } from "./config";
 import { SyncUtil } from "./sync";
 import { Router } from "./router";
 import type { PreSptModLoader } from "@spt/loaders/PreSptModLoader";
-import { HttpServerHelper } from "@spt/helpers/HttpServerHelper";
+import type { HttpServerHelper } from "@spt/helpers/HttpServerHelper";
 
 class Mod implements IPreSptLoadMod {
 	private static container: DependencyContainer;

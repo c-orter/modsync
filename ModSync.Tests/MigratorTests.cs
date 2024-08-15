@@ -81,7 +81,7 @@ public class MigratorTests
 
         CollectionAssert.AreEquivalent(syncPaths.Select(syncPath => syncPath.path).ToList(), previousSync.Keys);
         CollectionAssert.AreEquivalent(
-            new List<string>() { @"BepInEx\plugins\SAIN.dll", @"BepInEx\plugins\Corter-ModSync.dll" },
+            new List<string> { @"BepInEx\plugins\SAIN.dll", @"BepInEx\plugins\Corter-ModSync.dll" },
             previousSync[@"BepInEx\plugins"].Keys
         );
 

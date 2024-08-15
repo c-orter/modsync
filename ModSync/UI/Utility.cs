@@ -1,6 +1,7 @@
 using UnityEngine;
 
 namespace ModSync.UI;
+
 public static class Utility
 {
     public static Texture2D GetTexture(Color color)

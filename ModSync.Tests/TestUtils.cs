@@ -10,10 +10,8 @@ public static class TestUtils
 
         if (File.Exists(tempDirectory))
             return GetTemporaryDirectory();
-        else
-        {
-            Directory.CreateDirectory(tempDirectory);
-            return tempDirectory;
-        }
+
+        Directory.CreateDirectory(tempDirectory);
+        return tempDirectory;
     }
 }

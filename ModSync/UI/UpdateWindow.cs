@@ -17,11 +17,11 @@ public class UpdateWindow(string title, string message, string continueText = "C
         float screenWidth = Screen.width;
         float screenHeight = Screen.height;
 
-        var windowWidth = 800f;
-        var windowHeight = 640f;
+        const float windowWidth = 800f;
+        const float windowHeight = 640f;
 
         GUILayout.BeginArea(new Rect((screenWidth - windowWidth) / 2f, (screenHeight - windowHeight) / 2f, windowWidth, windowHeight));
-        alertBox.Draw(new(800f, 640f), updatesText, onAccept, onDecline);
+        alertBox.Draw(new Vector2(800f, 640f), updatesText, onAccept, onDecline);
         GUILayout.EndArea();
     }
 }
@@ -34,7 +34,7 @@ internal class UpdateBox(string title, string message, string continueText, stri
 
     private readonly UpdateButtonTooltip updateButtonTooltip = new();
 
-    private readonly int borderThickness = 2;
+    private const int borderThickness = 2;
     private Vector2 scrollPosition = Vector2.zero;
 
     public void Draw(Vector2 size, string updatesText, Action onAccept, Action onDecline)
@@ -114,25 +114,25 @@ internal class UpdateBox(string title, string message, string continueText, stri
         scrollPosition = GUI.BeginScrollView(
             scrollRect,
             scrollPosition,
-            new(0f, 0f, alertRect.width, scrollHeight + 32f),
+            new Rect(0f, 0f, alertRect.width, scrollHeight + 32f),
             false,
             true,
             GUIStyle.none,
             scrollbarStyle
         );
         GUI.skin = oldSkin;
-        GUI.Label(new(16f, 16f, alertRect.width - 56f, scrollHeight), updatesText, scrollStyle);
+        GUI.Label(new Rect(16f, 16f, alertRect.width - 56f, scrollHeight), updatesText, scrollStyle);
         GUI.EndScrollView();
 
-        if (onDecline != null && declineButton.Draw(new(actionsRect.x, actionsRect.y, actionsRect.width / 2, actionsRect.height)))
+        if (onDecline != null && declineButton.Draw(new Rect(actionsRect.x, actionsRect.y, actionsRect.width / 2, actionsRect.height)))
             onDecline();
         if (
             onAccept != null
             && acceptButton.Draw(
-                new(
+                new Rect(
                     actionsRect.x + (onDecline == null ? 0 : actionsRect.width / 2),
                     actionsRect.y,
-                    (onDecline == null ? actionsRect.width : actionsRect.width / 2),
+                    onDecline == null ? actionsRect.width : actionsRect.width / 2,
                     actionsRect.height
                 )
             )
@@ -179,7 +179,7 @@ internal class UpdateButton(string text, Color normalColor, Color hoverColor, Co
         return GUI.Button(
             buttonRect,
             new GUIContent(text, tooltip),
-            new GUIStyle()
+            new GUIStyle
             {
                 fontSize = 20,
                 fontStyle = FontStyle.Bold,
@@ -214,7 +214,7 @@ internal class UpdateButtonTooltip : Bordered
         GUI.Label(
             labelRect,
             text,
-            new GUIStyle()
+            new GUIStyle
             {
                 fontSize = 14,
                 alignment = TextAnchor.MiddleLeft,

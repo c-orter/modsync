@@ -16,19 +16,13 @@ public static class Sync
     )
     {
         return syncPaths
-            .Select(
-                (syncPath) =>
-                    new KeyValuePair<string, List<string>>(
-                        syncPath.path,
-                        remoteModFiles[syncPath.path]
-                            .Keys.Where((file) => !remoteModFiles[syncPath.path][file].nosync)
-                            .Except(
-                                localModFiles.TryGetValue(syncPath.path, out var modFiles) ? modFiles.Keys : new List<string>(),
-                                StringComparer.OrdinalIgnoreCase
-                            )
-                            .ToList()
-                    )
-            )
+            .Select(syncPath => new KeyValuePair<string, List<string>>(
+                syncPath.path,
+                remoteModFiles[syncPath.path]
+                    .Keys.Where(file => !remoteModFiles[syncPath.path][file].nosync)
+                    .Except(localModFiles.TryGetValue(syncPath.path, out var modFiles) ? modFiles.Keys : new List<string>(), StringComparer.OrdinalIgnoreCase)
+                    .ToList()
+            ))
             .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
     }
 
@@ -40,31 +34,28 @@ public static class Sync
     )
     {
         return syncPaths
-            .Select(
-                (syncPath) =>
-                {
-                    if (!localModFiles.TryGetValue(syncPath.path, out var localPathFiles))
-                        return new KeyValuePair<string, List<string>>(syncPath.path, []);
+            .Select(syncPath =>
+            {
+                if (!localModFiles.TryGetValue(syncPath.path, out var localPathFiles))
+                    return new KeyValuePair<string, List<string>>(syncPath.path, []);
 
-                    var query = remoteModFiles[syncPath.path].Keys.Intersect(localPathFiles.Keys, StringComparer.OrdinalIgnoreCase);
+                var query = remoteModFiles[syncPath.path].Keys.Intersect(localPathFiles.Keys, StringComparer.OrdinalIgnoreCase);
 
-                    if (!syncPath.enforced)
-                        query = query
-                            .Where((file) => !localPathFiles[file].nosync)
-                            .Where(
-                                (file) =>
-                                    !previousRemoteModFiles.TryGetValue(syncPath.path, out var previousPathFiles)
-                                    || !previousPathFiles.TryGetValue(file, out var modFile)
-                                    || remoteModFiles[syncPath.path][file].crc != modFile.crc
-                            );
-
+                if (!syncPath.enforced)
                     query = query
-                        .Where((file) => !remoteModFiles[syncPath.path][file].nosync)
-                        .Where((file) => remoteModFiles[syncPath.path][file].crc != localPathFiles[file].crc);
+                        .Where(file => !localPathFiles[file].nosync)
+                        .Where(file =>
+                            !previousRemoteModFiles.TryGetValue(syncPath.path, out var previousPathFiles)
+                            || !previousPathFiles.TryGetValue(file, out var modFile)
+                            || remoteModFiles[syncPath.path][file].crc != modFile.crc
+                        );
 
-                    return new KeyValuePair<string, List<string>>(syncPath.path, query.ToList());
-                }
-            )
+                query = query
+                    .Where(file => !remoteModFiles[syncPath.path][file].nosync)
+                    .Where(file => remoteModFiles[syncPath.path][file].crc != localPathFiles[file].crc);
+
+                return new KeyValuePair<string, List<string>>(syncPath.path, query.ToList());
+            })
             .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
     }
 
@@ -76,56 +67,52 @@ public static class Sync
     )
     {
         return syncPaths
-            .Select(
-                (syncPath) =>
-                {
-                    if (!localModFiles.TryGetValue(syncPath.path, out var localPathFiles))
-                        return new KeyValuePair<string, List<string>>(syncPath.path, []);
+            .Select(syncPath =>
+            {
+                if (!localModFiles.TryGetValue(syncPath.path, out var localPathFiles))
+                    return new KeyValuePair<string, List<string>>(syncPath.path, []);
 
-                    IEnumerable<string> query;
-                    if (syncPath.enforced)
-                        query = localPathFiles.Keys.Except(remoteModFiles[syncPath.path].Keys, StringComparer.OrdinalIgnoreCase);
-                    else
-                        query = !previousRemoteModFiles.TryGetValue(syncPath.path, out var previousPathFiles)
-                            ? []
-                            : previousPathFiles
-                                .Keys.Intersect(localPathFiles.Keys, StringComparer.OrdinalIgnoreCase)
-                                .Except(remoteModFiles[syncPath.path].Keys, StringComparer.OrdinalIgnoreCase);
+                IEnumerable<string> query;
+                if (syncPath.enforced)
+                    query = localPathFiles.Keys.Except(remoteModFiles[syncPath.path].Keys, StringComparer.OrdinalIgnoreCase);
+                else
+                    query = !previousRemoteModFiles.TryGetValue(syncPath.path, out var previousPathFiles)
+                        ? []
+                        : previousPathFiles
+                            .Keys.Intersect(localPathFiles.Keys, StringComparer.OrdinalIgnoreCase)
+                            .Except(remoteModFiles[syncPath.path].Keys, StringComparer.OrdinalIgnoreCase);
 
-                    return new KeyValuePair<string, List<string>>(syncPath.path, query.ToList());
-                }
-            )
+                return new KeyValuePair<string, List<string>>(syncPath.path, query.ToList());
+            })
             .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
     }
 
     public static Dictionary<string, Dictionary<string, ModFile>> HashLocalFiles(string basePath, List<SyncPath> syncPaths, List<SyncPath> enabledSyncPaths)
     {
         return syncPaths
-            .Select(
-                (syncPath) =>
+            .Select(syncPath =>
+            {
+                var path = Path.Combine(basePath, syncPath.path);
+
+                var modFiles = new Dictionary<string, ModFile>();
+
+                if (File.Exists(path)) // Sync Path is a single file
+                    modFiles = CreateModFile(basePath, path, enabledSyncPaths.Any(sp => sp.path == syncPath.path))
+                        .ToEnumerable()
+                        .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                else if (Directory.Exists(path)) // Sync Path is a directory
                 {
-                    var path = Path.Combine(basePath, syncPath.path);
-
-                    var modFiles = new Dictionary<string, ModFile>();
-
-                    if (File.Exists(path)) // Sync Path is a single file
-                        modFiles = CreateModFile(basePath, path, enabledSyncPaths.Any((sp) => sp.path == syncPath.path))
-                            .ToEnumerable()
-                            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-                    else if (Directory.Exists(path)) // Sync Path is a directory
-                    {
-                        modFiles = Directory
-                            .GetFiles(path, "*", SearchOption.AllDirectories)
-                            .AsParallel()
-                            .Where((file) => file != @"BepInEx\patchers\Corter-ModSync-Patcher.dll")
-                            .Where((file) => !file.EndsWith(".nosync") && !file.EndsWith(".nosync.txt"))
-                            .Select((file) => CreateModFile(basePath, file, enabledSyncPaths.Any((sp) => sp.path == syncPath.path)))
-                            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.OrdinalIgnoreCase);
-                    }
-
-                    return new KeyValuePair<string, Dictionary<string, ModFile>>(syncPath.path, modFiles);
+                    modFiles = Directory
+                        .GetFiles(path, "*", SearchOption.AllDirectories)
+                        .AsParallel()
+                        .Where(file => file != @"BepInEx\patchers\Corter-ModSync-Patcher.dll")
+                        .Where(file => !file.EndsWith(".nosync") && !file.EndsWith(".nosync.txt"))
+                        .Select(file => CreateModFile(basePath, file, enabledSyncPaths.Any(sp => sp.path == syncPath.path)))
+                        .ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.OrdinalIgnoreCase);
                 }
-            )
+
+                return new KeyValuePair<string, Dictionary<string, ModFile>>(syncPath.path, modFiles);
+            })
             .ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.OrdinalIgnoreCase);
     }
 

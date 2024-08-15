@@ -1,6 +1,7 @@
 using UnityEngine;
 
 namespace ModSync.UI;
+
 public static class Colors
 {
     public static readonly Color Primary = new Color32(98, 91, 147, 255);

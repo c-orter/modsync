@@ -8,6 +8,7 @@
 	},
 	"linter": {
 		"enabled": true,
+		"ignore": ["src/crc.ts"],
 		"rules": {
 			"recommended": true,
 			"complexity": {
