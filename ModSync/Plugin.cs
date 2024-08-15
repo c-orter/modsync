@@ -129,7 +129,7 @@ namespace ModSync
                 ))
                 .ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.OrdinalIgnoreCase);
 
-            if (enforcedDownloads.Values.Any(files => files.Any()))
+            if (enforcedDownloads.Values.Any(files => files.Count != 0))
             {
                 Task.Run(() => SyncMods(enforcedDownloads));
             }
@@ -233,7 +233,7 @@ namespace ModSync
         private void WriteModSyncData()
         {
             VFS.WriteTextFile(PREVIOUS_SYNC_PATH, Json.Serialize(remoteModFiles));
-            if (configDeleteRemovedFiles.Value && EnabledSyncPaths.Any((syncPath) => removedFiles[syncPath.path].Any()))
+            if (configDeleteRemovedFiles.Value && EnabledSyncPaths.Any((syncPath) => removedFiles[syncPath.path].Count != 0))
                 VFS.WriteTextFile(REMOVED_FILES_PATH, Json.Serialize(removedFiles.SelectMany(kvp => kvp.Value).ToList()));
         }
 
@@ -428,16 +428,16 @@ namespace ModSync
                 restartWindow.Draw(StartUpdaterProcess);
 
             if (progressWindow.Active)
-                progressWindow.Draw(downloadCount, totalDownloadCount, required.Any() || noRestart.Any() ? null : () => Task.Run(CancelUpdatingMods));
+                progressWindow.Draw(downloadCount, totalDownloadCount, required.Count != 0 || noRestart.Count != 0 ? null : () => Task.Run(CancelUpdatingMods));
 
             if (updateWindow.Active)
             {
                 updateWindow.Draw(
-                    (optional.Any() ? string.Join("\n", optional) : "")
-                        + (optional.Any() && required.Any() ? "\n\n" : "")
-                        + (required.Any() ? "[Enforced]\n" + string.Join("\n", required) : ""),
+                    (optional.Count != 0 ? string.Join("\n", optional) : "")
+                        + (optional.Count != 0 && required.Count != 0 ? "\n\n" : "")
+                        + (required.Count != 0 ? "[Enforced]\n" + string.Join("\n", required) : ""),
                     () => Task.Run(() => SyncMods(DownloadFiles)),
-                    required.Any() && !optional.Any() ? null : SkipUpdatingMods
+                    required.Count != 0 && optional.Count == 0 ? null : SkipUpdatingMods
                 );
             }
 
