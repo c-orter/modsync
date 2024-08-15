@@ -56,7 +56,7 @@ export class Router {
 	 * @internal
 	 */
 	public getSyncPaths(req: IncomingMessage, res: ServerResponse, _: RegExpMatchArray) {
-		const version = req.headers["ModSync-Version"] as string;
+		const version = req.headers["modsync-version"] as string;
 		if (version in FALLBACK_SYNCPATHS) {
 			res.setHeader("Content-Type", "application/json");
 			res.writeHead(200, "OK");
@@ -80,7 +80,7 @@ export class Router {
 	 * @internal
 	 */
 	public getHashes(req: IncomingMessage, res: ServerResponse, _: RegExpMatchArray) {
-		const version = req.headers["ModSync-Version"] as string;
+		const version = req.headers["modsync-version"] as string;
 		if (version in FALLBACK_HASHES) {
 			res.setHeader("Content-Type", "application/json");
 			res.writeHead(200, "OK");

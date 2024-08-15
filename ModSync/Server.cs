@@ -15,11 +15,11 @@ public class Server(Version pluginVersion)
     private async Task<string> GetJson(string path)
     {
         using var client = new HttpClient();
-        client.DefaultRequestHeaders.Add("ModSync-Version", pluginVersion.ToString());
+        client.DefaultRequestHeaders.Add("modsync-version", pluginVersion.ToString());
         var json = await client.GetStringAsync($@"{RequestHandler.Host}{path}");
         return json;
     }
-    
+
     public async Task DownloadFile(string file, string downloadDir, SemaphoreSlim limiter, CancellationToken cancellationToken)
     {
         if (cancellationToken.IsCancellationRequested)
@@ -66,7 +66,7 @@ public class Server(Version pluginVersion)
 
     public string GetModSyncVersion()
     {
-        return Json.Deserialize<string>(RequestHandler.GetJson("/modsync/version"));
+        return Json.Deserialize<string>(Task.Run(() => GetJson($"/modsync/version")).Result);
     }
 
     public List<SyncPath> GetModSyncPaths()
@@ -76,7 +76,7 @@ public class Server(Version pluginVersion)
 
     public Dictionary<string, Dictionary<string, ModFile>> GetRemoteModFileHashes()
     {
-        return Json.Deserialize<Dictionary<string, Dictionary<string, ModFile>>>(RequestHandler.GetJson($"/modsync/hashes"))
+        return Json.Deserialize<Dictionary<string, Dictionary<string, ModFile>>>(Task.Run(() => GetJson($"/modsync/hashes")).Result)
             .ToDictionary(
                 item => item.Key,
                 item => item.Value.ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.OrdinalIgnoreCase),
