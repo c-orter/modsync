@@ -81,9 +81,26 @@ internal static class Program
     {
         if (args.Length == 0 || args.All(arg => arg.StartsWith("--")))
         {
-            Logger.Log("Usage: ModSync.Updater.exe [--silent] <Tarkov PID>");
+            Console.WriteLine("Usage: ModSync.Updater.exe [--silent] <Tarkov PID>");
+
             if (!args.Contains("--silent"))
                 MessageBox.Show(@"Usage: ModSync.Updater.exe [--silent] <Tarkov PID>", @"Updater usage", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+
+            return;
+        }
+
+        if (!File.Exists("EscapeFromTarkov.exe"))
+        {
+            Console.WriteLine("[Corter-ModSync Updater]: Error: EscapeFromTarkov.exe not found. Make sure you are running the updater from your SPT folder!");
+
+            if (!args.Contains("--silent"))
+                MessageBox.Show(
+                    @"Error: EscapeFromTarkov.exe not found. Make sure you are running the updater from your SPT folder!",
+                    @"Error running updater",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error
+                );
+
             return;
         }
 
@@ -103,6 +120,7 @@ internal static class Program
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error
                 );
+
             return;
         }
 
