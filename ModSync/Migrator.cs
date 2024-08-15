@@ -27,7 +27,13 @@ public class Migrator(string baseDir)
             {
                 var persist = JObject.Parse(File.ReadAllText(MODSYNC_PATH));
                 if (persist.ContainsKey("version") && persist["version"] != null)
-                    return Version.Parse(persist["version"].Value<string>());
+                {
+                    return int.Parse(persist["version"].Value<string>()) switch
+                    {
+                        7 => Version.Parse("0.7.0"),
+                        _ => Version.Parse("0.0.0")
+                    };
+                }
             }
         }
         catch
