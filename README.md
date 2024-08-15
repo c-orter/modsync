@@ -84,41 +84,74 @@ This project allows clients to easily add/update/remove mods, keeping them in sy
 ```
 
 <table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
 <tbody>
 <tr>
 <td>
 
-**path - the actual path to be synced**<br>
+**path**</td>
+<td></td>
+<td>
+
+The actual path to be synced<br><br>
 Path must be relative to the SPT server installation and must be within the SPT server installation.
 </td>
 </tr>
 <tr>
 <td>
 
-**enabled (default: `true`) - whether or not the client will sync this path by default**<br>
+**enabled**</td>
+<td>
+
+`true`</td>
+<td>
+
+Whether or not the client will sync this path by default<br><br>
 Users can opt in to these directories through the BepInEx configuration manager (F12). (user/mods for instance)</td>
 </tr>
 <tr>
 <td>
 
-**enforced (default: `false`) - server authoritative syncing**<br>
+**enforced**</td>
+<td>
+
+`false`</td>
+<td>Server authoritative syncing<br><br>
 This mode enables server admins to (more or less) guarantee what files their clients will have. On sync paths with this option enabled any files added by the client will be removed, files modified by the client will be updated, and files removed will be re-downloaded.
 These updates cannot be skipped or cancelled.
 
-> **Note:** For enforced paths, any excluded files will have to be present on the server in order to not be deleted by the client. For example BepInEx/plugins/spt will have to be copied onto the server if you want to enforce BepInEx/plugins. These nosync files could be empty text files, as their hash isn't actually checked.
+> **NOTE:** For enforced paths, any excluded files will have to be present on the server in order to not be deleted by the client. For example BepInEx/plugins/spt will have to be copied onto the server if you want to enforce BepInEx/plugins. These nosync files could be empty text files, as their hash isn't actually checked.
 
-> **Note:** Users could just uninstall the plugin and change files at will. ¯\_(ツ)_/¯</td>
+> **NOTE:** Users could just uninstall the plugin and change files at will. ¯\_(ツ)_/¯</td>
 </tr>
 <tr>
 <td>
 
-**silent (default: `false`) - whether user will be prompted to apply these updates**<br>
+**silent**</td>
+<td>
+
+`false`</td>
+<td>
+
+Whether user will be prompted to apply these updates<br><br>
 When some silent and some non-silent updates are available to download, these updates will still be shown in the changelog. However, if applied on their own, these updates will be downloaded and the first prompt the user sees will be the restart required screen.</td>
 </tr>
 <tr>
 <td>
 
-**restartRequired (default: `true`) - controls if updates are applied immediately or using the updater outside of game.**<br>
+**restartRequired**</td>
+<td>
+
+`true`</td>
+<td>
+
+Controls if updates are applied immediately or using the updater outside of game.<br><br>
 This can be particularly useful for user/mods or if admins wanted to sync profiles so users could continue playing offline (though nothing would be synced back to the server). Paired with silent, this leads to updates where users only see the main menu when relevant updates occur.</td>
 </tr>
 </tbody>
