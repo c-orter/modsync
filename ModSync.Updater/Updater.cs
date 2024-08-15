@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using Newtonsoft.Json;
 
 namespace ModSync.Updater
@@ -36,7 +35,7 @@ namespace ModSync.Updater
             if (!File.Exists(Program.REMOVED_FILES_PATH))
                 return;
 
-            var filesToDelete = JsonConvert.DeserializeObject<List<string>>(File.ReadAllText(Program.REMOVED_FILES_PATH));
+            var filesToDelete = JsonConvert.DeserializeObject<List<string>>(File.ReadAllText(Program.REMOVED_FILES_PATH)) ?? [];
 
             foreach (var file in filesToDelete)
             {
@@ -55,7 +54,7 @@ namespace ModSync.Updater
                     File.Delete(file);
                 }
 
-                if (!Directory.GetParent(file)!.GetFiles("*", SearchOption.AllDirectories).Any())
+                if (Directory.GetParent(file)!.GetFiles("*", SearchOption.AllDirectories).Length == 0)
                 {
                     Logger.Log($"Deleting directory: {Directory.GetParent(file)!.FullName}");
                     Directory.GetParent(file)!.Delete();

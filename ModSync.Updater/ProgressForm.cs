@@ -43,7 +43,7 @@ namespace ModSync.Updater
             catch (Exception e)
             {
                 Logger.Log($"Error while attempting to copy updated files: {e.Message}");
-                Logger.Log(e.StackTrace);
+                Logger.Log(e.StackTrace ?? "No stack trace available.");
 
                 ProgressBar.Style = ProgressBarStyle.Blocks;
                 MessageBox.Show(
@@ -63,7 +63,7 @@ namespace ModSync.Updater
             catch (Exception e)
             {
                 Logger.Log($"Error while attempting to delete removed files: {e.Message}");
-                Logger.Log(e.StackTrace);
+                Logger.Log(e.StackTrace ?? "No stack trace available.");
 
                 ProgressBar.Style = ProgressBarStyle.Blocks;
                 MessageBox.Show(

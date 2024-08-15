@@ -13,11 +13,16 @@ cp("package.json", "../dist/user/mods/Corter-ModSync/");
 cp("src/*", "../dist/user/mods/Corter-ModSync/src");
 
 pushd("-q", "../");
-exec(`MSBuild.exe -p:Configuration=${configuration} /p:IncludeNativeLibrariesForSelfExtract=true -p:PublishSingleFile=true /verbosity:minimal`);
+exec(`dotnet build -c ${configuration}`);
+popd("-q");
+
+
+pushd("-q", "../ModSync.Updater");
+exec(`dotnet publish -c ${configuration} -r win-x64`);
 popd("-q");
 
 cp(`../ModSync/bin/${configuration}/Corter-ModSync.dll`, "../dist/BepInEx/plugins/");
-cp(`../ModSync.Updater/bin/${configuration}/ModSync.Updater.exe`, "../dist/")
+cp(`../ModSync.Updater/bin/${configuration}/net8.0-windows/win-x64/publish/ModSync.Updater.exe`, "../dist/")
 
 pushd("-q", "../dist");
 config.silent = true;

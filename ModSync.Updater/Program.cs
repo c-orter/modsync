@@ -79,10 +79,6 @@ namespace ModSync.Updater
         [STAThread]
         public static void Main(string[] args)
         {
-#pragma warning disable CS0618 // Need to access JSON dll from Tarkov files
-            AppDomain.CurrentDomain.AppendPrivatePath(Path.Combine(Directory.GetCurrentDirectory(), "EscapeFromTarkov_Data", "Managed"));
-#pragma warning restore CS0618
-
             var options = args.Where((arg) => arg.StartsWith("--")).ToList();
             var positional = args.Except(options);
 
