@@ -1,5 +1,6 @@
-// Full Credit to https://github.com/aleclarson/glob-regex
-// Copyright (c) 2016 Alec Larson
+/**
+ * Shamelessly stolen from - https://github.com/aleclarson/glob-regex
+ */
 
 const dotRE = /\./g;
 const dotPattern = "\\.";

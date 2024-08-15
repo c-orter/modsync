@@ -11,7 +11,7 @@ import { ConfigUtil, type Config } from "./config";
 import { SyncUtil } from "./sync";
 import { Router } from "./router";
 import type { PreSptModLoader } from "@spt/loaders/PreSptModLoader";
-import {HttpServerHelper} from "@spt/helpers/HttpServerHelper";
+import { HttpServerHelper } from "@spt/helpers/HttpServerHelper";
 
 class Mod implements IPreSptLoadMod {
 	private static container: DependencyContainer;
@@ -19,7 +19,7 @@ class Mod implements IPreSptLoadMod {
 	private static loadFailed = false;
 	private static config: Config;
 
-	public preSptLoad(container: DependencyContainer): void {
+	public async preSptLoad(container: DependencyContainer): Promise<void> {
 		Mod.container = container;
 		const logger = container.resolve<ILogger>("WinstonLogger");
 		const vfs = container.resolve<VFS>("VFS");
@@ -37,7 +37,7 @@ class Mod implements IPreSptLoadMod {
 		);
 
 		try {
-			Mod.config = configUtil.load();
+			Mod.config = await configUtil.load();
 		} catch (e) {
 			Mod.loadFailed = true;
 			logger.error("Corter-ModSync: Failed to load config!");
@@ -57,7 +57,8 @@ class Mod implements IPreSptLoadMod {
 		const logger = Mod.container.resolve<ILogger>("WinstonLogger");
 		const vfs = Mod.container.resolve<VFS>("VFS");
 		const httpFileUtil = Mod.container.resolve<HttpFileUtil>("HttpFileUtil");
-		const httpServerHelper = Mod.container.resolve<HttpServerHelper>("HttpServerHelper");
+		const httpServerHelper =
+			Mod.container.resolve<HttpServerHelper>("HttpServerHelper");
 		const modImporter =
 			Mod.container.resolve<PreSptModLoader>("PreSptModLoader");
 		const syncUtil = new SyncUtil(vfs, Mod.config, logger);

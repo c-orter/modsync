@@ -1,5 +1,6 @@
 ﻿import { fs } from "memfs";
 import type Dirent from "memfs/lib/Dirent";
+import { StatOptions, Stats } from "node:fs";
 export class VFS {
 	public exists(path: string) {
 		return fs.existsSync(path);
@@ -15,11 +16,20 @@ export class VFS {
 			.filter((item) => item.isDirectory())
 			.map((item) => item.name);
 	}
-	public readFile(path: string) {
+	public readFilePromisify(path: string): Promise<Buffer> {
 		const contents = fs.readFileSync(path);
 
-		if (contents instanceof Buffer) return contents.toString();
+		return Promise.resolve(contents as Buffer);
+	}
 
-		return contents;
+	public writeFilePromisify(path: string, contents: string, options?: any) {
+		return fs.writeFileSync(path, contents);
+	}
+
+	public statPromisify(
+		path: string,
+		options?: StatOptions & { bigint?: false },
+	) {
+		return Promise.resolve(fs.statSync(path) as Stats);
 	}
 }

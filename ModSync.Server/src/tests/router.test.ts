@@ -11,8 +11,9 @@ import { mock } from "vitest-mock-extended";
 import { PreSptModLoader } from "./utils/preSptModLoader";
 import type { PreSptModLoader as IPreSptModLoader } from "@spt/loaders/PreSptModLoader";
 import type { ILogger } from "@spt/models/spt/utils/ILogger";
-import type { ServerResponse } from "node:http";
+import type { IncomingMessage, ServerResponse } from "node:http";
 import { HttpError } from "../utility";
+import { HttpServerHelper } from "@spt/helpers/HttpServerHelper";
 
 vi.mock("node:fs", async () => (await vi.importActual("memfs")).fs);
 
@@ -24,18 +25,21 @@ describe("router", () => {
 				enabled: true,
 				enforced: false,
 				silent: false,
+				restartRequired: true,
 			},
 			{
 				path: "user/mods",
 				enabled: true,
 				enforced: false,
 				silent: false,
+				restartRequired: false,
 			},
 			{
 				path: "user/cache",
 				enabled: false,
 				enforced: false,
 				silent: false,
+				restartRequired: true,
 			},
 		],
 		["plugins/**/node_modules"],
@@ -44,63 +48,54 @@ describe("router", () => {
 	const logger = mock<ILogger>();
 	const syncUtil = new SyncUtil(vfs, config, logger);
 	const httpFileUtil = mock<HttpFileUtil>();
+	const httpServerHelper = mock<HttpServerHelper>();
 	const modImporter = new PreSptModLoader() as IPreSptModLoader;
 	const router = new Router(
 		config,
 		syncUtil,
 		vfs,
 		httpFileUtil,
+		httpServerHelper,
 		modImporter,
 		logger,
 	);
 
 	describe("getServerVersion", () => {
-		let res: ServerResponse;
+		let req = mock<IncomingMessage>({
+			headers: { "modsync-version": "0.8.0" },
+		});
+		let res = mock<ServerResponse>();
+
 		beforeEach(() => {
 			vol.reset();
 			vol.fromNestedJSON({ "package.json": '{ "version": "1.0.0" }' });
 
+			req = mock<IncomingMessage>({ headers: { "modsync-version": "0.8.0" } });
 			res = mock<ServerResponse>();
 		});
 
-		it("should return server version", () => {
-			router.getServerVersion(res, mock<RegExpMatchArray>());
+		it("should return server version", async () => {
+			await router.getServerVersion(req, res, mock<RegExpMatchArray>());
 
 			expect(res.end).toHaveBeenCalledWith(JSON.stringify("1.0.0"));
 		});
 	});
 
 	describe("getSyncPaths", () => {
-		let res: ServerResponse;
+		let req = mock<IncomingMessage>({
+			headers: { "modsync-version": "0.8.0" },
+		});
+		let res = mock<ServerResponse>();
+
 		beforeEach(() => {
+			req = mock<IncomingMessage>({ headers: { "modsync-version": "0.8.0" } });
 			res = mock<ServerResponse>();
 		});
 
-		it("should return sync paths", () => {
-			router.getSyncPaths(res, mock<RegExpMatchArray>());
+		it("should return sync paths", async () => {
+			await router.getSyncPaths(req, res, mock<RegExpMatchArray>());
 
-			expect(res.end).toHaveBeenCalledWith(
-				JSON.stringify([
-					{
-						path: "plugins",
-						enabled: true,
-						enforced: false,
-						silent: false,
-					},
-					{
-						path: "user\\mods",
-						enabled: true,
-						enforced: false,
-						silent: false,
-					},
-					{
-						path: "user\\cache",
-						enabled: false,
-						enforced: false,
-						silent: false,
-					},
-				]),
-			);
+			expect(res.end.mock.calls).toMatchSnapshot();
 		});
 	});
 
@@ -129,16 +124,20 @@ describe("router", () => {
 			},
 		};
 
+		let req = mock<IncomingMessage>({
+			headers: { "modsync-version": "0.8.0" },
+		});
 		let res = mock<ServerResponse>();
 		beforeEach(() => {
 			vol.reset();
 			vol.fromNestedJSON(directoryStructure);
 
+			req = mock<IncomingMessage>({ headers: { "modsync-version": "0.8.0" } });
 			res = mock<ServerResponse>();
 		});
 
-		it("should return hashes", () => {
-			router.getHashes(res, mock<RegExpMatchArray>());
+		it("should return hashes", async () => {
+			await router.getHashes(req, res, mock<RegExpMatchArray>());
 
 			expect(res.end.mock.calls).toMatchSnapshot();
 		});
@@ -169,17 +168,22 @@ describe("router", () => {
 			},
 		};
 
-		let res: ServerResponse;
+		let req = mock<IncomingMessage>({
+			headers: { "modsync-version": "0.8.0" },
+		});
+		let res = mock<ServerResponse>();
+
 		beforeEach(() => {
 			vol.reset();
 			vol.fromNestedJSON(directoryStructure);
 			httpFileUtil.sendFile.mockClear();
 
+			req = mock<IncomingMessage>({ headers: { "modsync-version": "0.8.0" } });
 			res = mock<ServerResponse>();
 		});
 
-		it("should return mod file", () => {
-			router.fetchModFile(res, [
+		it("should return mod file", async () => {
+			await router.fetchModFile(req, res, [
 				"/modsync/fetch/plugins/file1.dll",
 				"plugins/file1.dll",
 			]);
@@ -192,12 +196,12 @@ describe("router", () => {
 		});
 
 		it("should reject on non-existent path", () => {
-			expect(() => {
-				router.fetchModFile(res, [
+			expect(
+				router.fetchModFile(req, res, [
 					"/modsync/fetch/plugins/banana.dll",
 					"plugins/banana.dll",
-				]);
-			}).toThrowError(
+				]),
+			).rejects.toThrowError(
 				new HttpError(
 					404,
 					"Attempt to access non-existent path plugins/banana.dll",

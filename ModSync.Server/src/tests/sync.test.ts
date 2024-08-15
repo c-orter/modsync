@@ -47,6 +47,7 @@ const config = new Config(
 			enabled: true,
 			enforced: false,
 			silent: false,
+			restartRequired: true,
 		},
 	],
 	[],
@@ -62,8 +63,8 @@ beforeEach(() => {
 });
 
 describe("hashModFiles", () => {
-	it("should hash mod files", () => {
-		const hashes = syncUtil.hashModFiles(config.syncPaths);
+	it("should hash mod files", async () => {
+		const hashes = await syncUtil.hashModFiles(config.syncPaths);
 
 		expect(
 			Object.keys(hashes).some(
@@ -76,7 +77,7 @@ describe("hashModFiles", () => {
 		expect(hashes).toMatchSnapshot();
 	});
 
-	it("should correctly hash multiple folders", () => {
+	it("should correctly hash multiple folders", async () => {
 		const config = new Config(
 			[
 				{
@@ -84,12 +85,14 @@ describe("hashModFiles", () => {
 					enabled: true,
 					enforced: false,
 					silent: false,
+					restartRequired: true,
 				},
 				{
 					path: "user/mods",
 					enabled: true,
 					enforced: false,
 					silent: false,
+					restartRequired: false,
 				},
 			],
 			["user/mods/**/*.js", "user/mods/**/*.js.map"],
@@ -98,12 +101,12 @@ describe("hashModFiles", () => {
 		const vfs = new VFS();
 		const syncUtil = new SyncUtil(vfs as IVFS, config, logger);
 
-		const hashes = syncUtil.hashModFiles(config.syncPaths);
+		const hashes = await syncUtil.hashModFiles(config.syncPaths);
 
 		expect(hashes).toMatchSnapshot();
 	});
 
-	it("should correctly ignore folders that do not exist", () => {
+	it("should correctly ignore folders that do not exist", async () => {
 		const config = new Config(
 			[
 				{
@@ -111,12 +114,14 @@ describe("hashModFiles", () => {
 					enabled: true,
 					enforced: false,
 					silent: false,
+					restartRequired: true,
 				},
 				{
 					path: "user/bananas",
 					enabled: true,
 					enforced: false,
 					silent: false,
+					restartRequired: false,
 				},
 			],
 			["user/mods/**/*.js", "user/mods/**/*.js.map"],
@@ -125,7 +130,7 @@ describe("hashModFiles", () => {
 		const vfs = new VFS();
 		const syncUtil = new SyncUtil(vfs as IVFS, config, logger);
 
-		const hashes = syncUtil.hashModFiles(config.syncPaths);
+		const hashes = await syncUtil.hashModFiles(config.syncPaths);
 
 		expect(Object.keys(hashes["plugins"])).toContain("plugins\\file1.dll");
 		expect(Object.keys(hashes["plugins"])).toContain(
@@ -136,7 +141,7 @@ describe("hashModFiles", () => {
 		);
 	});
 
-	it("should correctly hash folders that didn't exist initially but are created", () => {
+	it("should correctly hash folders that didn't exist initially but are created", async () => {
 		const config = new Config(
 			[
 				{
@@ -144,12 +149,14 @@ describe("hashModFiles", () => {
 					enabled: true,
 					enforced: false,
 					silent: false,
+					restartRequired: true,
 				},
 				{
 					path: "user/bananas",
 					enabled: true,
 					enforced: false,
 					silent: false,
+					restartRequired: false,
 				},
 			],
 			["user/mods/**/*.js", "user/mods/**/*.js.map"],
@@ -158,7 +165,7 @@ describe("hashModFiles", () => {
 		const vfs = new VFS();
 		const syncUtil = new SyncUtil(vfs as IVFS, config, logger);
 
-		const hashes = syncUtil.hashModFiles(config.syncPaths);
+		const hashes = await syncUtil.hashModFiles(config.syncPaths);
 
 		expect(Object.keys(hashes["plugins"])).toContain("plugins\\file1.dll");
 		expect(Object.keys(hashes["plugins"])).toContain(
@@ -172,7 +179,7 @@ describe("hashModFiles", () => {
 		fs.mkdirSync("user/bananas", { recursive: true });
 		fs.writeFileSync("user/bananas/test.txt", "test");
 
-		const newHashes = syncUtil.hashModFiles(config.syncPaths);
+		const newHashes = await syncUtil.hashModFiles(config.syncPaths);
 
 		expect(newHashes).toMatchSnapshot();
 	});

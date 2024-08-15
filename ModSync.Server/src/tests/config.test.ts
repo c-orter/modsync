@@ -18,8 +18,20 @@ describe("Config", () => {
 	beforeEach(() => {
 		config = new Config(
 			[
-				{ path: "plugins", enabled: true, enforced: false, silent: false },
-				{ path: "mods", enabled: false, enforced: false, silent: false },
+				{
+					path: "plugins",
+					enabled: true,
+					enforced: false,
+					silent: false,
+					restartRequired: true,
+				},
+				{
+					path: "mods",
+					enabled: false,
+					enforced: false,
+					silent: false,
+					restartRequired: false,
+				},
 			],
 			["plugins/**/node_modules", "plugins/**/*.js"],
 		);
@@ -45,7 +57,7 @@ describe("ConfigUtil", () => {
 		vol.reset();
 	});
 
-	it("should load config", () => {
+	it("should load config", async () => {
 		vol.fromNestedJSON({
 			"config.jsonc": `{
 				"syncPaths": [
@@ -62,7 +74,7 @@ describe("ConfigUtil", () => {
 			mods: {},
 		});
 
-		const config = new ConfigUtil(
+		const config = await new ConfigUtil(
 			new VFS() as IVFS,
 			new JsonUtil() as IJsonUtil,
 			new PreSptModLoader() as IPreSptModLoader,
@@ -92,6 +104,7 @@ describe("ConfigUtil", () => {
 				silent: false,
 			},
 		]);
+
 		expect(config.commonModExclusions).toEqual(["plugins/**/node_modules"]);
 	});
 
@@ -119,9 +132,7 @@ describe("ConfigUtil", () => {
 			mock<ILogger>(),
 		);
 
-		expect(() => {
-			configUtil.load();
-		}).toThrow();
+		expect(configUtil.load()).rejects.toThrow();
 	});
 
 	it("should reject paths outside of SPT root", () => {
@@ -147,9 +158,7 @@ describe("ConfigUtil", () => {
 			mock<ILogger>(),
 		);
 
-		expect(() => {
-			configUtil.load();
-		}).toThrow();
+		expect(configUtil.load()).rejects.toThrow();
 	});
 
 	it("should reject invalid JSON", () => {
@@ -169,8 +178,6 @@ describe("ConfigUtil", () => {
 			mock<ILogger>(),
 		);
 
-		expect(() => {
-			configUtil.load();
-		}).toThrow();
+		expect(configUtil.load()).rejects.toThrow();
 	});
 });

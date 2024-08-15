@@ -1,10 +1,10 @@
 ﻿import type { VFS } from "@spt/utils/VFS";
 import path from "node:path";
-import crc32 from "buffer-crc32";
+import { crc32Init, crc32Update, crc32Final } from "./crc";
 import type { Config, SyncPath } from "./config";
 import { HttpError, winPath } from "./utility";
-import { readFileSync, statSync } from "node:fs";
 import type { ILogger } from "@spt/models/spt/utils/ILogger";
+import { createReadStream } from "node:fs";
 
 type ModFile = {
 	crc: number;
@@ -18,14 +18,16 @@ export class SyncUtil {
 		private logger: ILogger,
 	) {}
 
-	private getFilesInDir(dir: string): [string, boolean][] {
+	private async getFilesInDir(dir: string): Promise<[string, boolean][]> {
 		if (!this.vfs.exists(dir)) {
 			this.logger.warning(
 				`Corter-ModSync: Directory '${dir}' does not exist, will be ignored.`,
 			);
 			return [];
 		}
-		if (statSync(dir).isFile())
+
+		const stats = await this.vfs.statPromisify(dir);
+		if (stats.isFile())
 			return [
 				[
 					dir,
@@ -40,61 +42,89 @@ export class SyncUtil {
 			this.vfs.exists(path.join(dir, ".nosync")) ||
 			this.vfs.exists(path.join(dir, ".nosync.txt"));
 
-		return this.vfs
-			.getFiles(dir)
-			.filter(
-				(file) => !file.endsWith(".nosync") && !file.endsWith(".nosync.txt"),
-			)
-			.map((file): [string, boolean] => [
-				path.join(dir, file),
-				nosyncDir ||
-					this.config.isExcluded(path.join(dir, file)) ||
-					this.vfs.exists(`${path.join(dir, file)}.nosync`) ||
-					this.vfs.exists(`${path.join(dir, file)}.nosync.txt`),
-			])
-			.concat(
+		return (
+			await Promise.all(
 				this.vfs
-					.getDirs(dir)
-					.flatMap((subDir) => this.getFilesInDir(path.join(dir, subDir)))
-					.map(([child, nosync]): [string, boolean] => [
-						child,
-						nosyncDir || nosync,
-					]),
-			);
+					.getFiles(dir)
+					.filter(
+						(file) =>
+							!file.endsWith(".nosync") && !file.endsWith(".nosync.txt"),
+					)
+					.map(
+						async (file): Promise<[string, boolean]> => [
+							path.join(dir, file),
+							nosyncDir ||
+								this.config.isExcluded(path.join(dir, file)) ||
+								this.vfs.exists(`${path.join(dir, file)}.nosync`) ||
+								this.vfs.exists(`${path.join(dir, file)}.nosync.txt`),
+						],
+					),
+			)
+		).concat(
+			(
+				await Promise.all(
+					this.vfs
+						.getDirs(dir)
+						.map((subDir) => this.getFilesInDir(path.join(dir, subDir))),
+				)
+			)
+				.flat()
+				.map(([child, nosync]): [string, boolean] => [
+					child,
+					nosyncDir || nosync,
+				]),
+		);
 	}
 
-	private buildModFile(
+	private async buildModFile(
 		file: string,
 		// biome-ignore lint/correctness/noEmptyPattern: <explanation>
 		{}: Required<SyncPath>,
 		nosync: boolean,
-	): ModFile {
+	): Promise<ModFile> {
 		try {
+			const hash = await new Promise<number>((resolve, reject) => {
+				let crc = crc32Init();
+
+				createReadStream(file)
+					.on("error", reject)
+					.on("data", (data: Buffer) => {
+						crc = crc32Update(crc, data);
+					})
+					.on("end", () => {
+						resolve(crc32Final(crc));
+					});
+			});
+
 			return {
 				nosync,
-				crc: nosync ? 0 : crc32.unsigned(readFileSync(file)),
+				crc: nosync ? 0 : hash,
 			};
 		} catch (e) {
 			throw new HttpError(500, `Corter-ModSync: Error reading '${file}'\n${e}`);
 		}
 	}
 
-	public hashModFiles(
+	public async hashModFiles(
 		syncPaths: Config["syncPaths"],
-	): Record<string, Record<string, ModFile>> {
+	): Promise<Record<string, Record<string, ModFile>>> {
 		return Object.fromEntries(
-			syncPaths.map((syncPath) => [
-				winPath(syncPath.path),
-				Object.fromEntries(
-					this.getFilesInDir(syncPath.path).map(
-						([file, nosync]) =>
-							[
-								winPath(file),
-								this.buildModFile(file, syncPath, nosync),
-							] as const,
+			await Promise.all(
+				syncPaths.map(async (syncPath) => [
+					winPath(syncPath.path),
+					Object.fromEntries(
+						await Promise.all(
+							(await this.getFilesInDir(syncPath.path)).map(
+								async ([file, nosync]) =>
+									[
+										winPath(file),
+										await this.buildModFile(file, syncPath, nosync),
+									] as const,
+							),
+						),
 					),
-				),
-			]),
+				]),
+			),
 		);
 	}
 

@@ -8,22 +8,18 @@ import type { Config } from "./config";
 import { HttpError, winPath } from "./utility";
 import type { ILogger } from "@spt/models/spt/utils/ILogger";
 import type { PreSptModLoader } from "@spt/loaders/PreSptModLoader";
-import { statSync } from "node:fs";
-import {HttpServerHelper} from "@spt/helpers/HttpServerHelper";
+import { HttpServerHelper } from "@spt/helpers/HttpServerHelper";
 
 const FALLBACK_SYNCPATHS: Record<string, any> = {
-	undefined: [
-		"BepInEx\\plugins\\Corter-ModSync.dll",
-		"ModSync.Updater.exe",
-	]
-}
+	undefined: ["BepInEx\\plugins\\Corter-ModSync.dll", "ModSync.Updater.exe"],
+};
 
 const FALLBACK_HASHES: Record<string, any> = {
 	undefined: {
 		"BepInEx\\plugins\\Corter-ModSync.dll": { crc: 999999999 },
-		"ModSync.Updater.exe": { crc: 999999999 }
-	}
-}
+		"ModSync.Updater.exe": { crc: 999999999 },
+	},
+};
 
 export class Router {
 	constructor(
@@ -38,24 +34,38 @@ export class Router {
 
 	get packageJson() {
 		const modPath = this.modImporter.getModPath("Corter-ModSync");
-		return JSON.parse(
-			this.vfs.readFile(path.join(modPath, "package.json")),
+		return (
+			this.vfs
+				// @ts-expect-error I am right, SPT is wrong
+				.readFilePromisify(path.join(modPath, "package.json"), {
+					encoding: "utf-8",
+				})
+				// @ts-expect-error I am right, SPT is wrong
+				.then(JSON.parse)
 		);
-	}
-	
-	/**
-	 * @internal
-	 */
-	public getServerVersion(req: IncomingMessage, res: ServerResponse, _: RegExpMatchArray) {
-		res.setHeader("Content-Type", "application/json");
-		res.writeHead(200, "OK");
-		res.end(JSON.stringify(this.packageJson.version));
 	}
 
 	/**
 	 * @internal
 	 */
-	public getSyncPaths(req: IncomingMessage, res: ServerResponse, _: RegExpMatchArray) {
+	public async getServerVersion(
+		req: IncomingMessage,
+		res: ServerResponse,
+		_: RegExpMatchArray,
+	) {
+		res.setHeader("Content-Type", "application/json");
+		res.writeHead(200, "OK");
+		res.end(JSON.stringify((await this.packageJson).version));
+	}
+
+	/**
+	 * @internal
+	 */
+	public async getSyncPaths(
+		req: IncomingMessage,
+		res: ServerResponse,
+		_: RegExpMatchArray,
+	) {
 		const version = req.headers["modsync-version"] as string;
 		if (version in FALLBACK_SYNCPATHS) {
 			res.setHeader("Content-Type", "application/json");
@@ -63,7 +73,7 @@ export class Router {
 			res.end(JSON.stringify(FALLBACK_SYNCPATHS[version]));
 			return;
 		}
-		
+
 		res.setHeader("Content-Type", "application/json");
 		res.writeHead(200, "OK");
 		res.end(
@@ -79,7 +89,11 @@ export class Router {
 	/**
 	 * @internal
 	 */
-	public getHashes(req: IncomingMessage, res: ServerResponse, _: RegExpMatchArray) {
+	public async getHashes(
+		req: IncomingMessage,
+		res: ServerResponse,
+		_: RegExpMatchArray,
+	) {
 		const version = req.headers["modsync-version"] as string;
 		if (version in FALLBACK_HASHES) {
 			res.setHeader("Content-Type", "application/json");
@@ -87,17 +101,24 @@ export class Router {
 			res.end(JSON.stringify(FALLBACK_HASHES[version]));
 			return;
 		}
-		
-		
+
+		console.time("hash");
 		res.setHeader("Content-Type", "application/json");
 		res.writeHead(200, "OK");
-		res.end(JSON.stringify(this.syncUtil.hashModFiles(this.config.syncPaths)));
+		res.end(
+			JSON.stringify(await this.syncUtil.hashModFiles(this.config.syncPaths)),
+		);
+		console.timeEnd("hash");
 	}
 
 	/**
 	 * @internal
 	 */
-	public fetchModFile(_: IncomingMessage, res: ServerResponse, matches: RegExpMatchArray) {
+	public async fetchModFile(
+		_: IncomingMessage,
+		res: ServerResponse,
+		matches: RegExpMatchArray,
+	) {
 		const filePath = decodeURIComponent(matches[1]);
 
 		const sanitizedPath = this.syncUtil.sanitizeDownloadPath(
@@ -112,8 +133,12 @@ export class Router {
 			);
 
 		try {
-			const fileStats = statSync(sanitizedPath);
-			res.setHeader("Content-Type", this.httpServerHelper.getMimeText(path.extname(filePath)) || "text/plain");
+			const fileStats = await this.vfs.statPromisify(sanitizedPath);
+			res.setHeader(
+				"Content-Type",
+				this.httpServerHelper.getMimeText(path.extname(filePath)) ||
+					"text/plain",
+			);
 			res.setHeader("Content-Length", fileStats.size);
 			this.httpFileUtil.sendFile(res, sanitizedPath);
 		} catch (e) {
@@ -128,7 +153,7 @@ export class Router {
 		const routeTable = [
 			{
 				route: glob("/modsync/version"),
-				handler: this.getServerVersion.bind(this)
+				handler: this.getServerVersion.bind(this),
 			},
 			{
 				route: glob("/modsync/paths"),

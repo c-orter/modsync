@@ -7,3 +7,11 @@ exports[`router > getHashes > should return hashes 1`] = `
   ],
 ]
 `;
+
+exports[`router > getSyncPaths > should return sync paths 1`] = `
+[
+  [
+    "[{"path":"plugins","enabled":true,"enforced":false,"silent":false,"restartRequired":true},{"path":"user\\\\mods","enabled":true,"enforced":false,"silent":false,"restartRequired":false},{"path":"user\\\\cache","enabled":false,"enforced":false,"silent":false,"restartRequired":true}]",
+  ],
+]
+`;

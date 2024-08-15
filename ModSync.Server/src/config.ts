@@ -5,7 +5,6 @@ import type { VFS } from "@spt/utils/VFS";
 import { glob, globNoEnd } from "./glob";
 import { unixPath } from "./utility";
 import type { ILogger } from "@spt/models/spt/utils/ILogger";
-import fs from "node:fs";
 
 export type SyncPath = {
 	path: string;
@@ -98,15 +97,16 @@ export class ConfigUtil {
 	/**
 	 * @throws {Error} If the config file does not exist
 	 */
-	private readConfigFile(): RawConfig {
+	private async readConfigFile(): Promise<RawConfig> {
 		const modPath = this.modImporter.getModPath("Corter-ModSync");
 		const configPath = path.join(modPath, "config.jsonc");
 
 		if (!this.vfs.exists(configPath))
-			fs.writeFileSync(configPath, DEFAULT_CONFIG);
+			await this.vfs.writeFilePromisify(configPath, DEFAULT_CONFIG);
 
 		return this.jsonUtil.deserializeJsonC(
-			this.vfs.readFile(configPath),
+			// @ts-expect-error I am right, SPT is wrong
+			await this.vfs.readFilePromisify(configPath, { encoding: "utf-8" }),
 			"config.jsonc",
 		) as RawConfig;
 	}
@@ -157,8 +157,8 @@ export class ConfigUtil {
 		}
 	}
 
-	public load(): Config {
-		const rawConfig = this.readConfigFile();
+	public async load(): Promise<Config> {
+		const rawConfig = await this.readConfigFile();
 		this.validateConfig(rawConfig);
 
 		return new Config(
