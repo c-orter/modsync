@@ -26,7 +26,6 @@ cp(`../ModSync.Updater/bin/${configuration}/net8.0-windows/win-x64/publish/ModSy
 
 pushd("-q", "../dist");
 config.silent = true;
-exec(`7z a -tzip Corter-ModSync-Client-v${packageJson.version}.zip BepInEx/ ModSync.Updater.exe`);
-exec(`7z a -tzip Corter-ModSync-Server-v${packageJson.version}.zip BepInEx/ ModSync.Updater.exe user/`);
+exec(`7z a -tzip Corter-ModSync-v${packageJson.version}.zip BepInEx/ ModSync.Updater.exe user/`);
 config.silent = false;
 popd("-q");
