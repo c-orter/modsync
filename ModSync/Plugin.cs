@@ -294,7 +294,16 @@ public class Plugin : BaseUnityPlugin
         configSyncPathToggles = syncPaths
             .Select(syncPath => new KeyValuePair<string, ConfigEntry<bool>>(
                 syncPath.path,
-                Config.Bind("Synced Paths", syncPath.path.Replace("\\", "/"), syncPath.enabled, $"Should the mod attempt to sync files from {syncPath}")
+                Config.Bind(
+                    "Synced Paths",
+                    syncPath.path.Replace("\\", "/"),
+                    syncPath.enabled,
+                    new ConfigDescription(
+                        $"Should the mod attempt to sync files from {syncPath}",
+                        null,
+                        new ConfigurationManagerAttributes { ReadOnly = syncPath.enforced }
+                    )
+                )
             ))
             .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 
