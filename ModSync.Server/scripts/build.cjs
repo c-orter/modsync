@@ -8,7 +8,6 @@ if (process.argv.includes("--debug"))
 rm("-rf", "../dist");
 mkdir("-p", "../dist/user/mods/Corter-ModSync/src");
 mkdir("-p", "../dist/BepInEx/plugins");
-mkdir("-p", "../dist/BepInEx/patchers");
 cp("package.json", "../dist/user/mods/Corter-ModSync/");
 cp("src/*", "../dist/user/mods/Corter-ModSync/src");
 
