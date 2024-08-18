@@ -83,22 +83,20 @@ export class SyncUtil {
 		nosync: boolean,
 	): Promise<ModFile> {
 		try {
-			const hash = await new Promise<number>((resolve, reject) => {
-				let crc = crc32Init();
-
-				createReadStream(file)
-					.on("error", reject)
-					.on("data", (data: Buffer) => {
-						crc = crc32Update(crc, data);
-					})
-					.on("end", () => {
-						resolve(crc32Final(crc));
-					});
-			});
-
 			return {
 				nosync,
-				crc: nosync ? 0 : hash,
+				crc: nosync ? 0 : await new Promise<number>((resolve, reject) => {
+					let crc = crc32Init();
+
+					createReadStream(file)
+						.on("error", reject)
+						.on("data", (data: Buffer) => {
+							crc = crc32Update(crc, data);
+						})
+						.on("end", () => {
+							resolve(crc32Final(crc));
+						});
+				}),
 			};
 		} catch (e) {
 			throw new HttpError(500, `Corter-ModSync: Error reading '${file}'\n${e}`);
