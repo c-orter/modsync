@@ -39,9 +39,9 @@ popd("-q");
 pushd("-q", "../ModSync.Updater");
 sed(
 	"-i",
-	`"${currentVersion}"`,
-	`"${newVersion}"`,
-	"Properties/AssemblyInfo.cs",
+	`<Version>${currentVersion}</Version>`,
+	`<Version>${newVersion}</Version>`,
+	"ModSync.Updater.csproj",
 );
 popd("-q");
 
