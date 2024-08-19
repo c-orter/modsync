@@ -99,13 +99,11 @@ export class Router {
 			return;
 		}
 
-		console.time("hash");
 		res.setHeader("Content-Type", "application/json");
 		res.writeHead(200, "OK");
 		res.end(
 			JSON.stringify(await this.syncUtil.hashModFiles(this.config.syncPaths)),
 		);
-		console.timeEnd("hash");
 	}
 
 	/**

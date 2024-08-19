@@ -2,7 +2,7 @@
 import path from "node:path";
 import { crc32Init, crc32Update, crc32Final } from "./crc";
 import type { Config, SyncPath } from "./config";
-import { HttpError, winPath } from "./utility";
+import {HttpError, Semaphore, winPath} from "./utility";
 import type { ILogger } from "@spt/models/spt/utils/ILogger";
 import { createReadStream } from "node:fs";
 
@@ -12,6 +12,8 @@ type ModFile = {
 };
 
 export class SyncUtil {
+	private limiter = new Semaphore(1024);
+	
 	constructor(
 		private vfs: VFS,
 		private config: Config,
@@ -83,9 +85,11 @@ export class SyncUtil {
 		nosync: boolean,
 	): Promise<ModFile> {
 		try {
-			return {
-				nosync,
-				crc: nosync ? 0 : await new Promise<number>((resolve, reject) => {
+			let crc = 0;
+			if (!nosync) {
+				const lock = await this.limiter.acquire();
+				
+				crc = await new Promise<number>((resolve, reject) => {
 					let crc = crc32Init();
 
 					createReadStream(file)
@@ -96,7 +100,14 @@ export class SyncUtil {
 						.on("end", () => {
 							resolve(crc32Final(crc));
 						});
-				}),
+				});
+				
+				lock.release();
+			}
+			
+			return {
+				nosync,
+				crc,
 			};
 		} catch (e) {
 			throw new HttpError(500, `Corter-ModSync: Error reading '${file}'\n${e}`);
