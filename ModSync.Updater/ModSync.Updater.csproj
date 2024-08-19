@@ -7,7 +7,7 @@
         <UseWindowsForms>true</UseWindowsForms>
         <ApplicationIcon>homemade_v3.ico</ApplicationIcon>
         <IsPackable>false</IsPackable>
-        <Version>0.8.0</Version>
+        <Version>0.8.1</Version>
         <SignAssembly>true</SignAssembly>
         <AssemblyOriginatorKeyFile>Corter-Signing.snk</AssemblyOriginatorKeyFile>
         <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
